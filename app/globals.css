@@ -1,0 +1,57 @@
+@import 'tailwindcss';
+
+/* The n8builds look (n8builds-web app/globals.css): site navy, cyan accents,
+   and the WCAG-safe muted slates. Dark only. */
+@theme {
+  --color-darkBlue: #050812;
+  --color-panel: #0a1022;
+  --color-panel-raised: #0e1630;
+  --color-slate-450: #8291a7;
+  --color-slate-475: #768399;
+  --font-sans: var(--font-inter), system-ui, arial, sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: rgb(255 255 255 / 0.07);
+  }
+
+  html {
+    background: var(--color-darkBlue);
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    background: var(--color-darkBlue);
+    color: #e2e8f0;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-cyan-400);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

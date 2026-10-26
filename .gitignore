@@ -1,0 +1,18 @@
+/node_modules
+/coverage
+/.next/
+/out/
+.DS_Store
+*.pem
+npm-debug.log*
+
+# Local env files: secrets live here and in Vercel, never in git.
+.env
+.env*.local
+
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+
+# Chrome profiles that chrome-launcher creates in the working directory under WSL
+/C:*
