@@ -20,6 +20,8 @@
     "lint": "eslint . --max-warnings 0",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
+    "test:e2e": "npm run build && npm run build:e2e && playwright test",
+    "test:e2e:only": "playwright test",
     "setup:docs": "node scripts/gen-setup-docs.mjs",
     "lighthouse": "node scripts/lighthouse.mjs"
   },
@@ -33,6 +35,8 @@
     "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",

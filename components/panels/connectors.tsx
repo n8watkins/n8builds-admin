@@ -8,7 +8,7 @@ import { Sparkline } from '../Sparkline'
 import { Actions, BarList, ExternalAction, NotConnected, OutLink, PanelError, Stat, errorMessage } from '../ui'
 
 const STORE_VARS = ['ANALYTICS_REDIS_REST_URL', 'ANALYTICS_REDIS_REST_TOKEN']
-const code = 'rounded bg-white/[0.07] px-1.5 py-0.5 font-mono text-[0.9em] text-slate-100'
+const code = 'rounded bg-white/[0.07] px-1.5 py-0.5 font-mono text-[0.9em] text-slate-100 [overflow-wrap:anywhere]'
 
 // ---------------------------------------------------------------------------
 // Errors (Sentry)

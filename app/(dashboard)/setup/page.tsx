@@ -37,7 +37,7 @@ export default async function SetupPage() {
           {done} of {checkable.length} done
           {manual > 0 && <span className="font-normal text-slate-400">, plus {manual} to confirm in Vercel</span>}
         </p>
-        <ol className="mt-5 grid gap-x-6 gap-y-1 lg:grid-cols-2">
+        <ol className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-x-6 gap-y-1 lg:grid-cols-2">
           {items.map(({ item, status }, index) => (
             <li key={item.id}>
               <a href={`#${item.id}`} className="flex items-center gap-3 rounded-lg px-3 py-2 text-[15px] text-slate-200 hover:bg-white/[0.05]">

@@ -27,6 +27,22 @@ GITHUB_TOKEN=$(gh auth token) npm run dev   # http://localhost:3831
 npm run lint && npm run type-check && npm test
 ```
 
+## End-to-end tests
+
+Playwright runs against two production servers, so it tests what actually ships:
+
+- **gate**: the normal build (`.next`, what Vercel deploys), started with `ADMIN_DEV_BYPASS=1` and `ADMIN_TEST_AUTH=1` to prove both are ignored. Every page redirects to `/login`, API routes answer 401, forged cookies are refused, responses are `noindex`.
+- **app**: the E2E build (`.next-e2e`) with the test-only sign-in stub. Every page renders with no errors and no axe (WCAG 2.1 AA) violations, the sidebar and phone menu navigate, links to other sites open in a new tab and say so, and no page scrolls sideways at 375 or 320 pixels.
+
+```sh
+npx playwright install chromium   # once
+GITHUB_TOKEN=$(gh auth token) npm run test:e2e   # builds both, then runs the specs
+npm run test:e2e:only             # rerun the specs without rebuilding
+```
+
+Without `GITHUB_TOKEN` the GitHub pages show their "not connected" states; the specs pass either way.
+The test servers use ports 3834 and 3835.
+
 ## Lighthouse
 
 Lighthouse runs against a real production build with a test-only sign-in stub (`lib/auth/test-auth.ts`).

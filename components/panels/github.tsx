@@ -96,7 +96,9 @@ export async function CiStatus() {
                       )}>
                       <Dot tone={runTone(run)} />
                       <span className="max-w-52 truncate">{run.workflow}</span>
+                      <span className="sr-only">{`: ${runLabel(run)},`}</span>
                       <span className="text-slate-400">{timeAgo(run.createdAt)}</span>
+                      <span className="sr-only">(opens in a new tab)</span>
                     </a>
                   </li>
                 ))}

@@ -174,15 +174,15 @@ export function PageHeader({ area, lead, actions }: { area: Area; lead?: ReactNo
   ))
   return (
     <header className="mb-10">
+      {/* One set of actions: beside the title from sm up, under the lead on phones (flex order). */}
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
-        <div className="flex min-w-0 items-center gap-4">
+        <div className="order-1 flex min-w-0 items-center gap-4">
           <AreaIcon area={area} size="lg" />
           <h1 className="text-[26px] leading-tight font-semibold tracking-tight text-balance text-slate-50 sm:text-[30px]">{area.label}</h1>
         </div>
-        {actions && <Actions className="max-sm:hidden">{actions}</Actions>}
+        <p className="order-2 max-w-3xl basis-full text-[16px] leading-relaxed text-slate-300 sm:order-3">{lead ?? area.summary}</p>
+        {actions && <Actions className="order-3 sm:order-2">{actions}</Actions>}
       </div>
-      <p className="mt-4 max-w-3xl text-[16px] leading-relaxed text-slate-300">{lead ?? area.summary}</p>
-      {actions && <Actions className="mt-5 sm:hidden">{actions}</Actions>}
       {area.about.length > 0 && (
         <>
           {/* Wide screens: the facts side by side, always visible. */}

@@ -18,3 +18,7 @@ next-env.d.ts
 
 # Chrome profiles that chrome-launcher creates in the working directory under WSL
 /C:*
+
+# Playwright
+/test-results/
+/playwright-report/
