@@ -9,19 +9,17 @@ Never paste a secret, token or key into a chat, an issue, a commit or a doc.
 Agents only ever need the variable names, never the values.
 The dashboard's Setup page shows the same list with each item's live status.
 
-## 1. Sign-in: GitHub OAuth Apps
+## 1. Sign-in: a GitHub OAuth App
 
 Lets you sign in with GitHub; only your account (user ID 8055935) gets in.
 
-1. GitHub OAuth Apps take exactly one callback URL, so make two apps: one for production and one for local use.
-2. Open GitHub, Settings, Developer settings, OAuth Apps, New OAuth App.
-3. Production app: name `n8builds admin`, homepage `https://admin.n8builds.dev`, callback URL `https://admin.n8builds.dev/api/auth/callback`, Device Flow off.
-4. Register it, click "Generate a new client secret", and put the Client ID and secret in Vercel as `GITHUB_OAUTH_CLIENT_ID` and `GITHUB_OAUTH_CLIENT_SECRET`.
-5. Local app: name `n8builds admin (local)`, homepage `http://localhost:3831`, callback URL `http://localhost:3831/api/auth/callback`.
-6. Put the local app's Client ID and secret in `.env.local` under the same two names.
-7. Make a session secret with `openssl rand -base64 48` and set it as `ADMIN_SESSION_SECRET` (a different value in Vercel and in `.env.local`).
-8. No scopes are requested: the app only learns which account signed in, and the dashboard revokes that token straight away.
-9. Rotating `ADMIN_SESSION_SECRET` signs every session out.
+1. Open GitHub, Settings, Developer settings, OAuth Apps, New OAuth App.
+2. Name `n8builds admin`, homepage `https://admin.n8builds.dev`, redirect URI `https://admin.n8builds.dev/api/auth/callback`; wildcard matching and Device Flow off; "Expire user access tokens" can stay on.
+3. Register it, click "Generate a new client secret", and put the Client ID and secret in Vercel as `GITHUB_OAUTH_CLIENT_ID` and `GITHUB_OAUTH_CLIENT_SECRET`.
+4. Optional, for real GitHub sign-in on your machine: add a second redirect URI `http://localhost:3831/api/auth/callback` to the same app and put the same two values in `.env.local`. Without it, the local preview runs on `ADMIN_DEV_BYPASS`.
+5. Make a session secret with `openssl rand -base64 48` and set it as `ADMIN_SESSION_SECRET` (a different value in Vercel and in `.env.local`).
+6. No scopes are requested: the app only learns which account signed in, and the dashboard revokes that token straight away.
+7. Rotating `ADMIN_SESSION_SECRET` signs every session out.
 
 Where: [GitHub OAuth Apps](https://github.com/settings/developers), [New OAuth App](https://github.com/settings/applications/new).
 Sets: `GITHUB_OAUTH_CLIENT_ID`, `GITHUB_OAUTH_CLIENT_SECRET`, `ADMIN_SESSION_SECRET`.
@@ -32,8 +30,8 @@ Reads CI runs, Actions minutes, stars, repo traffic, releases, deploys and Depen
 
 1. A fine-grained token covers one resource owner, so the personal repos and the Appturnity org each get their own token.
 2. Open GitHub, Settings, Developer settings, Personal access tokens, Fine-grained tokens, Generate new token.
-3. Token one: name `n8builds-admin read`, resource owner `n8watkins`, expiration 1 year (add a calendar reminder to renew it).
-4. Repository access: "Only select repositories": n8builds-web, dev-portfolio, portfolio-rank, open-ping, scribe, solara, piper-tts, tl-dw and tube-vault.
+3. Token one: name `n8builds-admin read`, resource owner `n8watkins`, expiration 1 year (add a calendar reminder to renew it; the current one, made 2026-10-27, expires 2027-10-27).
+4. Repository access: "Only select repositories": n8builds-web, dev-portfolio, portfolio-rank, open-ping, scribe, solara, piper-tts, tl-dw, tube-vault and n8builds-admin.
 5. Repository permissions, all read-only: Actions, Administration (for views and clones), Contents, Deployments, Dependabot alerts, and Metadata (added automatically).
 6. Account permissions: Plan, read-only (for the personal Actions minutes report).
 7. Set it as `GITHUB_TOKEN`.
@@ -119,8 +117,8 @@ Where: [n8builds-web Firewall](https://vercel.com/natkins23s-projects/n8builds-w
 
 | Variable | Step | Where |
 | --- | --- | --- |
-| `GITHUB_OAUTH_CLIENT_ID` | 1 | Vercel and `.env.local` (different apps) |
-| `GITHUB_OAUTH_CLIENT_SECRET` | 1 | Vercel and `.env.local` (different apps) |
+| `GITHUB_OAUTH_CLIENT_ID` | 1 | Vercel (and `.env.local` for real sign-in locally) |
+| `GITHUB_OAUTH_CLIENT_SECRET` | 1 | Vercel (and `.env.local` for real sign-in locally) |
 | `ADMIN_SESSION_SECRET` | 1 | Vercel and `.env.local` (different values) |
 | `GITHUB_TOKEN` | 2 | Vercel (locally: `GITHUB_TOKEN=$(gh auth token)` when starting the server) |
 | `GITHUB_ORG_TOKEN` (optional) | 2 | Vercel (optional locally: the gh token reads the org) |

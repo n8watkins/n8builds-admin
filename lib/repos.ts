@@ -1,5 +1,5 @@
 /**
- * The repos the dashboard watches: every public repo behind a build on
+ * The repos the dashboard watches: this dashboard's own repo, and every public repo behind a build on
  * n8builds.dev (the builds with a `repo` in n8builds-web's data/builds.tsx),
  * plus the site itself and the developer portfolio.
  * When a build is added there, add its repo here.
@@ -33,6 +33,8 @@ export const TRACKED_REPOS: TrackedRepo[] = [
   { repo: 'n8watkins/piper-tts', label: 'Piper TTS', branch: 'master', site: 'https://n8builds.dev/builds/piper-tts' },
   { repo: 'n8watkins/tl-dw', label: 'TL;DW', branch: 'master', site: 'https://n8builds.dev/builds/tldw' },
   { repo: 'n8watkins/tube-vault', label: 'TubeVault', branch: 'master', site: 'https://n8builds.dev/builds/tubevault' },
+  // This dashboard itself (private): its CI, deploys and Dependabot alerts.
+  { repo: 'n8watkins/n8builds-admin', label: 'Admin dashboard', branch: 'main', vercelProject: 'n8builds-admin', site: 'https://admin.n8builds.dev' },
 ]
 
 /** GitHub Free's included Actions minutes per month, for a personal account and for a free org. */
