@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { SESSION_COOKIE } from '@/lib/auth/config'
-import { isDevBypassEnabled } from '@/lib/auth/dev-bypass'
+import { signInSkipped } from '@/lib/auth/bypass'
 import { verifySessionToken } from '@/lib/auth/tokens'
 
 /**
@@ -10,7 +10,7 @@ import { verifySessionToken } from '@/lib/auth/tokens'
  * can never expose data on its own.
  */
 export async function proxy(request: NextRequest) {
-  if (isDevBypassEnabled()) return NextResponse.next()
+  if (signInSkipped()) return NextResponse.next()
   const session = await verifySessionToken(request.cookies.get(SESSION_COOKIE)?.value)
   if (session) return NextResponse.next()
   if (request.nextUrl.pathname.startsWith('/api/')) {

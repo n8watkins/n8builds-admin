@@ -30,6 +30,8 @@ export type SetupItem = {
   check: 'env' | 'deployed' | 'manual'
   vars: SetupVar[]
   steps: string[]
+  /** The places the steps happen, as buttons on the Setup page. */
+  links: { label: string; href: string }[]
 }
 
 export const SETUP_INTRO = [
@@ -63,6 +65,10 @@ export const SETUP_ITEMS: SetupItem[] = [
       'No scopes are requested: the app only learns which account signed in, and the dashboard revokes that token straight away.',
       'Rotating `ADMIN_SESSION_SECRET` signs every session out.',
     ],
+    links: [
+      { label: 'GitHub OAuth Apps', href: 'https://github.com/settings/developers' },
+      { label: 'New OAuth App', href: 'https://github.com/settings/applications/new' },
+    ],
   },
   {
     id: 'github',
@@ -94,6 +100,10 @@ export const SETUP_ITEMS: SetupItem[] = [
       'If GitHub refuses the org billing report with the fine-grained token, a classic token with only `read:org` works for it instead.',
       'While you are there, turn on Dependabot alerts in each repo\'s Settings, Code security (the Security alerts page lists the repos that have them off).',
     ],
+    links: [
+      { label: 'New fine-grained token', href: 'https://github.com/settings/personal-access-tokens/new' },
+      { label: 'Appturnity token policy', href: 'https://github.com/organizations/Appturnity/settings/personal-access-tokens' },
+    ],
   },
   {
     id: 'ga4',
@@ -117,6 +127,11 @@ export const SETUP_ITEMS: SetupItem[] = [
       'From the JSON file, set `client_email` as `GOOGLE_SA_CLIENT_EMAIL` and `private_key` as `GOOGLE_SA_PRIVATE_KEY` (paste it as it is, `\\n` sequences included).',
       'Delete the downloaded JSON file once both values are in Vercel.',
     ],
+    links: [
+      { label: 'Enable the Analytics Data API', href: 'https://console.cloud.google.com/apis/library/analyticsdata.googleapis.com' },
+      { label: 'Service accounts', href: 'https://console.cloud.google.com/iam-admin/serviceaccounts' },
+      { label: 'Google Analytics admin', href: 'https://analytics.google.com/analytics/web/#/admin' },
+    ],
   },
   {
     id: 'sentry',
@@ -138,6 +153,7 @@ export const SETUP_ITEMS: SetupItem[] = [
       'Set the project slugs to watch, comma-separated (the n8builds-web and portfolio projects), as `SENTRY_PROJECTS`.',
       'Only if your org lives in Sentry\'s EU region, also set `SENTRY_API_BASE` to `https://de.sentry.io`.',
     ],
+    links: [{ label: 'Sentry auth tokens', href: 'https://sentry.io/settings/account/api/auth-tokens/' }],
   },
   {
     id: 'upstash',
@@ -162,6 +178,7 @@ export const SETUP_ITEMS: SetupItem[] = [
       'The daily snapshot (`/api/cron/snapshot`, 06:15 UTC, in `vercel.json`) starts on the first deploy, and trends fill in from the next day.',
       'The referral and contact counters also need a small change in n8builds-web (an agent task, not yet done), using the same two Upstash variables there.',
     ],
+    links: [{ label: 'Upstash console', href: 'https://console.upstash.com/redis' }],
   },
   {
     id: 'vercel',
@@ -179,6 +196,10 @@ export const SETUP_ITEMS: SetupItem[] = [
       'Open `https://admin.n8builds.dev`, sign in with GitHub, and check that this page shows everything connected.',
       'Optional check: sign in with any other GitHub account and see "This dashboard is private to its owner".',
     ],
+    links: [
+      { label: 'New Vercel project', href: 'https://vercel.com/new' },
+      { label: 'New GitHub repo', href: 'https://github.com/new' },
+    ],
   },
   {
     id: 'ai-bots',
@@ -192,6 +213,7 @@ export const SETUP_ITEMS: SetupItem[] = [
       'Under Bot Management (managed rulesets), turn on "AI Bots" and set its action to Log, not Deny.',
       'Repeat for the portfolio project if you want its crawlers logged too.',
     ],
+    links: [{ label: 'n8builds-web Firewall', href: 'https://vercel.com/natkins23s-projects/n8builds-web/firewall' }],
   },
 ]
 

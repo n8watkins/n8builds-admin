@@ -1,6 +1,8 @@
-import { timeAgo, formatNumber } from '@/lib/format'
+import { LuGithub } from 'react-icons/lu'
+import { formatNumber, timeAgo } from '@/lib/format'
 import {
   getClones,
+  getLatestOtherRun,
   getOrgMinutes,
   getPersonalMinutes,
   getRepo,
@@ -10,7 +12,7 @@ import {
   type WorkflowRun,
 } from '@/lib/github'
 import { APPTURNITY_ORG, FREE_ACTIONS_MINUTES, TRACKED_REPOS, shortName } from '@/lib/repos'
-import { BarList, Dot, Meter, NotConnected, PanelError, cx, type Tone } from '../ui'
+import { Actions, BarList, Dot, ExternalAction, Meter, NotConnected, OutLink, PanelError, Stat, StatusPill, cx, type Tone } from '../ui'
 
 export function GitHubNotConnected() {
   return (
@@ -34,67 +36,86 @@ function runLabel(run: WorkflowRun): string {
   return run.status === 'completed' ? (run.conclusion ?? 'done').replace('_', ' ') : run.status.replace('_', ' ')
 }
 
+// ---------------------------------------------------------------------------
+// CI
+
 export async function CiStatus() {
   if (!isGitHubConnected()) return <GitHubNotConnected />
-  const results = await Promise.all(TRACKED_REPOS.map(async (tracked) => ({ tracked, ci: await getRepoCi(tracked.repo) })))
+  const results = await Promise.all(
+    TRACKED_REPOS.map(async (tracked) => {
+      const [ci, other] = await Promise.all([getRepoCi(tracked.repo), getLatestOtherRun(tracked.repo)])
+      return { tracked, ci, other }
+    }),
+  )
   if (results.every(({ ci }) => !ci.ok)) {
     const first = results[0]?.ci
     return <PanelError message={first && !first.ok ? first.message : 'No repo answered'} />
   }
+  // Failing repos first, then the rest in their usual order.
+  const sorted = [...results].sort((a, b) => Number(b.ci.ok && b.ci.data.latestByWorkflow.some((run) => runTone(run) === 'bad')) - Number(a.ci.ok && a.ci.data.latestByWorkflow.some((run) => runTone(run) === 'bad')))
   return (
-    <ul className="-mx-2 divide-y divide-white/[0.04]">
-      {results.map(({ tracked, ci }) => {
+    <ul className="-my-2 divide-y divide-white/[0.06]">
+      {sorted.map(({ tracked, ci, other }) => {
         if (!ci.ok) {
           return (
-            <li key={tracked.repo} className="px-2 py-2.5 text-[13px] text-rose-200/80">
+            <li key={tracked.repo} className="py-5 text-[15px] text-rose-200">
               {shortName(tracked.repo)}: {ci.message}
             </li>
           )
         }
-        const { latestByWorkflow, latest, defaultBranch } = ci.data
-        const failing = latestByWorkflow.some((run) => runTone(run) === 'bad')
-        const offDefault = latest && latest.branch !== defaultBranch ? latest : null
+        const { latestByWorkflow, defaultBranch } = ci.data
+        const failing = latestByWorkflow.filter((run) => runTone(run) === 'bad')
+        const tone: Tone = latestByWorkflow.length === 0 ? 'idle' : failing.length > 0 ? 'bad' : 'good'
         return (
-          <li key={tracked.repo} className="flex flex-col gap-2 px-2 py-2.5 sm:flex-row sm:items-start sm:gap-4">
-            <div className="flex w-full min-w-0 items-center gap-2 sm:w-44 sm:shrink-0">
-              <Dot tone={latestByWorkflow.length === 0 ? 'idle' : failing ? 'bad' : 'good'} />
-              <a href={`https://github.com/${tracked.repo}/actions`} target="_blank" rel="noreferrer" className="truncate text-[13px] font-medium text-slate-100 hover:text-cyan-300">
-                {shortName(tracked.repo)}
-              </a>
+          <li key={tracked.repo} className="py-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[17px] font-semibold text-slate-50">{shortName(tracked.repo)}</p>
+                <p className="text-[14px] text-slate-400">
+                  {tracked.label} · <span className="font-mono">{defaultBranch}</span>
+                </p>
+              </div>
+              <StatusPill tone={tone}>{tone === 'idle' ? 'No CI runs' : failing.length > 0 ? `${failing.length} failing` : 'Passing'}</StatusPill>
             </div>
-            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-              {latestByWorkflow.length === 0 ? (
-                <p className="text-xs text-slate-475">No workflow runs on {defaultBranch}</p>
-              ) : (
-                <ul className="flex flex-wrap gap-1.5">
-                  {latestByWorkflow.slice(0, 6).map((run) => (
-                    <li key={run.id}>
-                      <a
-                        href={run.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        title={`${run.workflow} on ${run.branch}: ${runLabel(run)}, ${timeAgo(run.createdAt)}`}
-                        className={cx(
-                          'flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs transition-colors hover:bg-white/[0.08]',
-                          runTone(run) === 'bad' ? 'bg-rose-400/10 text-rose-100' : 'bg-white/[0.04] text-slate-300',
-                        )}>
-                        <Dot tone={runTone(run)} />
-                        <span className="max-w-40 truncate">{run.workflow}</span>
-                        <span className="text-slate-475">{timeAgo(run.createdAt)}</span>
-                      </a>
-                    </li>
-                  ))}
-                </ul>
+            {latestByWorkflow.length > 0 && (
+              <ul className="mt-4 flex flex-wrap gap-2">
+                {latestByWorkflow.slice(0, 6).map((run) => (
+                  <li key={run.id}>
+                    <a
+                      href={run.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={`${run.workflow}: ${runLabel(run)}, ${timeAgo(run.createdAt)} (opens GitHub)`}
+                      className={cx(
+                        'flex items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] transition-colors',
+                        runTone(run) === 'bad' ? 'bg-rose-400/12 text-rose-100 hover:bg-rose-400/20' : 'bg-white/[0.05] text-slate-200 hover:bg-white/[0.1]',
+                      )}>
+                      <Dot tone={runTone(run)} />
+                      <span className="max-w-52 truncate">{run.workflow}</span>
+                      <span className="text-slate-400">{timeAgo(run.createdAt)}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {other && (
+              <p className="mt-3 flex items-center gap-2 text-[14px] text-slate-400">
+                <Dot tone={runTone(other)} />
+                <span className="min-w-0 truncate">
+                  Latest on another branch: {other.workflow} {runLabel(other)} on <span className="font-mono text-slate-300">{other.branch}</span>, {timeAgo(other.createdAt)}
+                </span>
+              </p>
+            )}
+            <Actions className="mt-4">
+              {failing[0] && (
+                <ExternalAction href={failing[0].url} variant="primary">
+                  Open the failing run
+                </ExternalAction>
               )}
-              {offDefault && (
-                <a href={offDefault.url} target="_blank" rel="noreferrer" className="flex min-w-0 items-center gap-1.5 text-xs text-slate-450 hover:text-cyan-300">
-                  <Dot tone={runTone(offDefault)} />
-                  <span className="truncate">
-                    Latest: {offDefault.workflow} {runLabel(offDefault)} on <span className="font-mono text-slate-400">{offDefault.branch}</span>, {timeAgo(offDefault.createdAt)}
-                  </span>
-                </a>
-              )}
-            </div>
+              <ExternalAction href={`https://github.com/${tracked.repo}/actions`} icon={LuGithub}>
+                All runs on GitHub
+              </ExternalAction>
+            </Actions>
           </li>
         )
       })}
@@ -102,70 +123,89 @@ export async function CiStatus() {
   )
 }
 
-export async function ActionsMinutes() {
+// ---------------------------------------------------------------------------
+// Actions minutes
+
+const ORG_BILLING = `https://github.com/organizations/${APPTURNITY_ORG}/settings/billing`
+
+export async function OrgMinutes() {
   if (!isGitHubConnected()) return <GitHubNotConnected />
-  const [org, personal] = await Promise.all([getOrgMinutes(), getPersonalMinutes()])
+  const org = await getOrgMinutes()
+  if (!org.ok) return <PanelError message={`GitHub answered ${org.status || 'nothing'}: ${org.message}`} />
   const month = new Date().toLocaleString('en-US', { month: 'long', timeZone: 'UTC' })
+  const usedUp = org.data.total >= FREE_ACTIONS_MINUTES
+  const left = Math.max(0, FREE_ACTIONS_MINUTES - org.data.total)
   return (
-    <div className="flex flex-1 flex-col gap-5">
-      <div>
-        <div className="mb-2 flex items-baseline justify-between gap-3">
-          <p className="text-[13px] font-medium text-slate-200">{APPTURNITY_ORG} org</p>
-          {org.ok && (
-            <p className="font-mono text-xs text-slate-400 tabular-nums">
-              <span className="text-base font-semibold text-slate-50">{formatNumber(org.data.total)}</span> / {formatNumber(FREE_ACTIONS_MINUTES)} min
-            </p>
-          )}
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <Stat label={`Used in ${month}`} value={`${formatNumber(org.data.total)} / ${formatNumber(FREE_ACTIONS_MINUTES)}`} tone={usedUp ? 'bad' : undefined} hint="minutes" />
+        <StatusPill tone={usedUp ? 'bad' : org.data.total / FREE_ACTIONS_MINUTES >= 0.7 ? 'warn' : 'good'}>
+          {usedUp ? 'Free minutes used up' : `${formatNumber(left)} free minutes left`}
+        </StatusPill>
+      </div>
+      <Meter value={org.data.total} max={FREE_ACTIONS_MINUTES} label={`${APPTURNITY_ORG} Actions minutes used in ${month}`} />
+      {usedUp && org.data.netAmount === 0 && (
+        <div role="status" className="rounded-xl bg-rose-400/[0.09] p-5 text-[15px] leading-relaxed text-rose-100">
+          <p className="font-semibold">Appturnity&apos;s workflows have probably stopped.</p>
+          <p className="mt-1 text-rose-100/85">
+            All 2,000 free minutes are used{org.data.lastDay ? `, with no usage since ${org.data.lastDay}` : ''}, and $0 was billed. Private-repo workflows (monorepo-app) won&apos;t run until the minutes reset at the start of next month, unless you add a payment method and a budget that allows paid minutes (Linux costs $0.006 a minute).
+          </p>
         </div>
-        {org.ok ? (
-          <>
-            <Meter value={org.data.total} max={FREE_ACTIONS_MINUTES} label={`${APPTURNITY_ORG} Actions minutes used in ${month}`} />
-            {org.data.total >= FREE_ACTIONS_MINUTES && org.data.netAmount === 0 ? (
-              <p role="status" className="mt-3 rounded-lg bg-rose-400/[0.07] px-3 py-2.5 text-xs leading-relaxed text-rose-200">
-                <b className="font-semibold">All 2,000 free minutes are used</b>
-                {org.data.lastDay ? ` (no usage since ${org.data.lastDay})` : ''}, with $0 billed: private-repo workflows can&apos;t run until the minutes reset on the 1st, unless a budget allows paid minutes.
-              </p>
-            ) : (
-              <p className="mt-1.5 text-xs text-slate-450">
-                {formatNumber(Math.max(0, FREE_ACTIONS_MINUTES - org.data.total))} free minutes left in {month}
-                {org.data.netAmount > 0 ? `, $${org.data.netAmount.toFixed(2)} billed` : ', $0 billed'}
-              </p>
-            )}
-            {org.data.byRepo.length > 0 && (
-              <div className="mt-3">
-                <BarList rows={org.data.byRepo.map((row) => ({ label: row.repo, value: row.minutes }))} format={(value) => `${formatNumber(value)} min`} />
-              </div>
-            )}
-          </>
-        ) : (
-          <PanelError message={`GitHub answered ${org.status || 'nothing'}: ${org.message}`} />
-        )}
-      </div>
-      <div className="flex flex-1 flex-col">
-        <p className="mb-2 text-[13px] font-medium text-slate-200">Personal (n8watkins)</p>
-        {personal.ok ? (
-          <>
-            <Meter value={personal.data.total} max={FREE_ACTIONS_MINUTES} label={`Personal Actions minutes used in ${month}`} />
-            <p className="mt-1.5 text-xs text-slate-450">
-              {formatNumber(personal.data.total)} / {formatNumber(FREE_ACTIONS_MINUTES)} min. Public repos don&apos;t count.
-            </p>
-          </>
-        ) : (
-          <NotConnected
-            kind="needs-permission"
-            why={
-              <>
-                GitHub answered {personal.status === 404 ? '404' : personal.status} for the personal billing report: the token needs the account permission <b className="font-semibold text-slate-200">Plan: read</b>. All the tracked repos are public, so their minutes are free either way.
-              </>
-            }
-            needs={['GITHUB_TOKEN (Plan: read)']}
-            setupId="github"
-          />
-        )}
-      </div>
+      )}
+      {org.data.byRepo.length > 0 && (
+        <div>
+          <p className="mb-3 text-[14px] font-medium text-slate-300">By repo</p>
+          <BarList rows={org.data.byRepo.map((row) => ({ label: row.repo, value: row.minutes }))} format={(value) => `${formatNumber(value)} min`} />
+        </div>
+      )}
+      <Actions>
+        <ExternalAction href={ORG_BILLING} variant="primary" icon={LuGithub}>
+          Open Appturnity billing on GitHub
+        </ExternalAction>
+        <ExternalAction href={`https://github.com/organizations/${APPTURNITY_ORG}/settings/billing/budgets`}>Set a spending budget</ExternalAction>
+        <ExternalAction href={`https://github.com/${APPTURNITY_ORG}/monorepo-app/actions`}>monorepo-app runs</ExternalAction>
+      </Actions>
     </div>
   )
 }
+
+export async function PersonalMinutes() {
+  if (!isGitHubConnected()) return <GitHubNotConnected />
+  const personal = await getPersonalMinutes()
+  if (personal.ok) {
+    return (
+      <div className="flex flex-col gap-6">
+        <Stat label="Used this month" value={`${formatNumber(personal.data.total)} / ${formatNumber(FREE_ACTIONS_MINUTES)}`} hint="minutes" />
+        <Meter value={personal.data.total} max={FREE_ACTIONS_MINUTES} label="Personal Actions minutes used this month" />
+        <Actions>
+          <ExternalAction href="https://github.com/settings/billing" icon={LuGithub}>
+            Open your billing on GitHub
+          </ExternalAction>
+        </Actions>
+      </div>
+    )
+  }
+  return (
+    <NotConnected
+      kind="needs-permission"
+      why={
+        <>
+          GitHub answers {personal.status || 'nothing'} for your personal billing report: the token needs the account permission <b className="font-semibold text-slate-100">Plan: read</b>. All the n8builds repos are public, so they use no minutes either way.
+        </>
+      }
+      needs={['GITHUB_TOKEN with Plan: read']}
+      setupId="github"
+      actions={
+        <ExternalAction href="https://github.com/settings/billing" icon={LuGithub}>
+          Open your billing on GitHub
+        </ExternalAction>
+      }
+    />
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Stars and traffic
 
 export async function RepoStats() {
   if (!isGitHubConnected()) return <GitHubNotConnected />
@@ -179,66 +219,59 @@ export async function RepoStats() {
     const first = rows[0]?.repo
     return <PanelError message={first && !first.ok ? first.message : 'No repo answered'} />
   }
-  const totals = rows.reduce(
-    (sum, row) => ({
-      stars: sum.stars + (row.repo.ok ? row.repo.data.stargazers_count : 0),
-      views: sum.views + (row.views.ok ? row.views.data.count : 0),
-      viewers: sum.viewers + (row.views.ok ? row.views.data.uniques : 0),
-      clones: sum.clones + (row.clones.ok ? row.clones.data.count : 0),
-    }),
-    { stars: 0, views: 0, viewers: 0, clones: 0 },
-  )
+  const sum = (pick: (row: (typeof rows)[number]) => number) => rows.reduce((total, row) => total + pick(row), 0)
+  const stars = sum((row) => (row.repo.ok ? row.repo.data.stargazers_count : 0))
+  const views = sum((row) => (row.views.ok ? row.views.data.count : 0))
+  const viewers = sum((row) => (row.views.ok ? row.views.data.uniques : 0))
+  const clones = sum((row) => (row.clones.ok ? row.clones.data.count : 0))
+  const cloners = sum((row) => (row.clones.ok ? row.clones.data.uniques : 0))
   const traffic = (result: (typeof rows)[number]['views']) =>
     result.ok ? (
       <>
-        {formatNumber(result.data.count)} <span className="block text-slate-475 sm:inline">/ {formatNumber(result.data.uniques)}</span>
+        <span className="text-slate-50">{formatNumber(result.data.count)}</span>
+        <span className="block text-[14px] text-slate-400">{formatNumber(result.data.uniques)} unique</span>
       </>
     ) : (
-      <span className="text-slate-475" title={result.message}>
+      <span className="text-slate-400" title={result.message}>
         n/a
       </span>
     )
   return (
-    <div className="-mx-1">
-      <table className="w-full text-left text-[13px]">
-        <caption className="sr-only">Stars, and views and clones over the last 14 days (total / unique), per repo</caption>
-        <thead>
-          <tr className="text-[11px] tracking-wide text-slate-450 uppercase">
-            <th scope="col" className="px-1 pb-2 font-medium">Repo</th>
-            <th scope="col" className="px-1 pb-2 text-right font-medium">Stars</th>
-            <th scope="col" className="px-1 pb-2 text-right font-medium">Views 14d</th>
-            <th scope="col" className="px-1 pb-2 text-right font-medium">Clones 14d</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-white/[0.04] font-mono text-xs text-slate-200 tabular-nums">
-          {rows.map(({ tracked, repo, views, clones }) => (
-            <tr key={tracked.repo}>
-              <th scope="row" className="px-1 py-2 text-left align-top font-sans font-normal">
-                <a href={`https://github.com/${tracked.repo}`} target="_blank" rel="noreferrer" className="text-[13px] font-medium text-slate-100 hover:text-cyan-300">
-                  {shortName(tracked.repo)}
-                </a>
-                <span className="ml-2 hidden text-xs text-slate-475 sm:inline">{tracked.label}</span>
-              </th>
-              <td className="px-1 py-2 text-right align-top">{repo.ok ? formatNumber(repo.data.stargazers_count) : 'n/a'}</td>
-              <td className="px-1 py-2 text-right align-top">{traffic(views)}</td>
-              <td className="px-1 py-2 text-right align-top">{traffic(clones)}</td>
+    <div className="flex flex-col gap-8">
+      <div className="grid grid-cols-2 gap-6 sm:grid-cols-3">
+        <Stat label="Stars" value={formatNumber(stars)} hint={`across ${TRACKED_REPOS.length} public repos`} />
+        <Stat label="Views, 14 days" value={formatNumber(views)} hint={`${formatNumber(viewers)} unique visitors`} />
+        <Stat label="Clones, 14 days" value={formatNumber(clones)} hint={`${formatNumber(cloners)} unique (mostly bots)`} />
+      </div>
+      <div className="-mx-1 overflow-x-auto">
+        <table className="w-full min-w-[340px] text-left text-[15px]">
+          <caption className="sr-only">Stars, and views and clones over the last 14 days, per repo</caption>
+          <thead>
+            <tr className="text-[14px] text-slate-400">
+              <th scope="col" className="px-1 pb-3 font-medium">Repo</th>
+              <th scope="col" className="px-1 pb-3 text-right font-medium">Stars</th>
+              <th scope="col" className="px-1 pb-3 text-right font-medium">Views</th>
+              <th scope="col" className="px-1 pb-3 text-right font-medium">Clones</th>
             </tr>
-          ))}
-        </tbody>
-        <tfoot className="font-mono text-xs text-slate-50 tabular-nums">
-          <tr className="border-t border-white/[0.08]">
-            <th scope="row" className="px-1 pt-2.5 text-left align-top font-sans text-[11px] font-medium tracking-wide text-slate-450 uppercase">
-              All repos
-            </th>
-            <td className="px-1 pt-2.5 text-right align-top font-semibold">{formatNumber(totals.stars)}</td>
-            <td className="px-1 pt-2.5 text-right font-semibold">
-              {formatNumber(totals.views)} <span className="block font-normal text-slate-475 sm:inline">/ {formatNumber(totals.viewers)}</span>
-            </td>
-            <td className="px-1 pt-2.5 text-right align-top font-semibold">{formatNumber(totals.clones)}</td>
-          </tr>
-        </tfoot>
-      </table>
-      <p className="mt-3 px-1 text-xs text-slate-475">Views and clones: total / unique. GitHub keeps 14 days; the daily snapshot will keep the rest.</p>
+          </thead>
+          <tbody className="divide-y divide-white/[0.06] tabular-nums">
+            {rows.map(({ tracked, repo, views: repoViews, clones: repoClones }) => (
+              <tr key={tracked.repo}>
+                <th scope="row" className="px-1 py-3.5 text-left align-top font-normal">
+                  <OutLink href={`https://github.com/${tracked.repo}/graphs/traffic`} className="font-medium text-slate-50 hover:text-cyan-200">
+                    {shortName(tracked.repo)}
+                  </OutLink>
+                  <span className="block text-[14px] text-slate-400">{tracked.label}</span>
+                </th>
+                <td className="px-1 py-3.5 text-right align-top text-slate-50">{repo.ok ? formatNumber(repo.data.stargazers_count) : 'n/a'}</td>
+                <td className="px-1 py-3.5 text-right align-top">{traffic(repoViews)}</td>
+                <td className="px-1 py-3.5 text-right align-top">{traffic(repoClones)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-[14px] leading-relaxed text-slate-400">Each repo name opens its traffic graph on GitHub. Clones are mostly automated (CI, mirrors, bots), so views are the better signal of people.</p>
     </div>
   )
 }

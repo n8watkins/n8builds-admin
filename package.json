@@ -13,11 +13,15 @@
     "dev": "next dev --webpack -p 3831",
     "build": "next build --webpack",
     "postbuild": "node scripts/check-no-dev-bypass.mjs",
+    "build:e2e": "ADMIN_E2E_BUILD=1 next build --webpack",
+    "postbuild:e2e": "ADMIN_E2E_BUILD=1 node scripts/check-no-dev-bypass.mjs",
     "start": "next start -p 3831",
+    "start:e2e": "ADMIN_E2E_BUILD=1 ADMIN_TEST_AUTH=1 next start -p 3831",
     "lint": "eslint . --max-warnings 0",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
-    "setup:docs": "node scripts/gen-setup-docs.mjs"
+    "setup:docs": "node scripts/gen-setup-docs.mjs",
+    "lighthouse": "node scripts/lighthouse.mjs"
   },
   "dependencies": {
     "@upstash/redis": "^1.40.0",
@@ -25,6 +29,7 @@
     "next": "^16.4.2",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "react-icons": "^5.7.0",
     "server-only": "^0.0.1"
   },
   "devDependencies": {
@@ -32,9 +37,11 @@
     "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "chrome-launcher": "^1.2.2",
     "esbuild": "^0.28.2",
     "eslint": "^10.13.0",
     "eslint-config-next": "^16.4.2",
+    "lighthouse": "^13.5.0",
     "postcss": "^8.5.31",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",

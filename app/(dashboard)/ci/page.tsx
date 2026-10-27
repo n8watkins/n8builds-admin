@@ -1,22 +1,29 @@
 import type { Metadata } from 'next'
+import { LuGithub } from 'react-icons/lu'
 import { CiStatus } from '@/components/panels/github'
 import { Slot } from '@/components/Slot'
-import { PageHeader, Panel } from '@/components/ui'
+import { ExternalAction, PageHeader, Panel } from '@/components/ui'
+import { AREAS } from '@/lib/areas'
 import { requireOwner } from '@/lib/auth/owner'
 
-export const metadata: Metadata = { title: 'CI' }
+const area = AREAS.ci
 
-export default async function CiPage() {
-  // The layout and the proxy check too; every page checks on its own as well.
+export const metadata: Metadata = { title: area.label }
+
+export default async function Page() {
+  // The proxy and the layout check too; every page checks on its own as well.
   await requireOwner()
   return (
     <>
       <PageHeader
-        title="CI"
-        description="The newest run of each workflow on every tracked repo's default branch, plus the latest run on any other branch."
-        source={{ label: 'GitHub Actions', href: 'https://github.com/n8watkins' }}
+        area={area}
+        actions={
+          <ExternalAction href="https://github.com/n8watkins?tab=repositories" icon={LuGithub}>
+            Your repos on GitHub
+          </ExternalAction>
+        }
       />
-      <Panel id="ci" title="Workflows by repo">
+      <Panel id="ci" title="Workflows by repo" description="The newest run of each workflow on each repo's main branch. Failing repos come first; each chip opens that run on GitHub.">
         <Slot rows={9}>
           <CiStatus />
         </Slot>

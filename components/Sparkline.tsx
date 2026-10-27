@@ -1,7 +1,7 @@
 /** A small inline trend line (server-rendered SVG, no chart library). */
 export function Sparkline({ values, label }: { values: (number | null)[]; label: string }) {
   const points = values.map((value, index) => ({ value, index })).filter((point): point is { value: number; index: number } => point.value !== null)
-  if (points.length < 2) return <p className="text-xs text-slate-475">Needs two days of data for a trend.</p>
+  if (points.length < 2) return <p className="text-[14px] text-slate-400">Needs two days of data for a trend.</p>
   const min = Math.min(...points.map((point) => point.value))
   const max = Math.max(...points.map((point) => point.value))
   const width = 240

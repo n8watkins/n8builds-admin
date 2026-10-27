@@ -2,20 +2,22 @@ import type { Metadata } from 'next'
 import { ReferralsPanel } from '@/components/panels/connectors'
 import { Slot } from '@/components/Slot'
 import { PageHeader, Panel } from '@/components/ui'
+import { AREAS } from '@/lib/areas'
 import { requireOwner } from '@/lib/auth/owner'
 
-export const metadata: Metadata = { title: 'Referrals to Appturnity' }
+const area = AREAS.referrals
 
-export default async function ReferralsPage() {
-  // The layout and the proxy check too; every page checks on its own as well.
+export const metadata: Metadata = { title: area.label }
+
+export default async function Page() {
+  // The proxy and the layout check too; every page checks on its own as well.
   await requireOwner()
   return (
     <>
       <PageHeader
-        title="Referrals to Appturnity"
-        description="How many visitors n8builds.dev sends to appturnity.com, counted on our side."
+        area={area}
       />
-      <Panel id="referrals" title="Clicks to appturnity.com" className="max-w-3xl">
+      <Panel id="referrals" title="Clicks to appturnity.com" description="Counted on n8builds.dev, by link placement.">
         <Slot>
           <ReferralsPanel />
         </Slot>

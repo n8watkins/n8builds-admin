@@ -1,6 +1,7 @@
 import 'server-only'
 import { cache } from 'react'
 import { REVALIDATE_SECONDS } from './cache'
+import { traced } from './trace'
 import { APPTURNITY_ORG, PERSONAL_ACCOUNT, TRACKED_REPOS } from './repos'
 
 const API = 'https://api.github.com'
@@ -24,14 +25,14 @@ async function gh<T>(path: string, owner: 'personal' | 'org' = 'personal'): Prom
   const token = tokenFor(owner)
   if (!token) return { ok: false, status: 0, message: 'No GitHub token' }
   try {
-    const response = await fetch(`${API}${path}`, {
+    const response = await traced(`github ${path}`, () => fetch(`${API}${path}`, {
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: 'application/vnd.github+json',
         'X-GitHub-Api-Version': '2022-11-28',
       },
       next: { revalidate: REVALIDATE_SECONDS },
-    })
+    }))
     if (!response.ok) {
       const body = (await response.json().catch(() => ({}))) as { message?: string }
       return { ok: false, status: response.status, message: body.message ?? response.statusText }
@@ -94,29 +95,34 @@ export type RepoCi = {
   defaultBranch: string
   /** The newest run of each workflow on the default branch. */
   latestByWorkflow: WorkflowRun[]
-  /** The newest run on any branch (a pull request, usually). */
-  latest: WorkflowRun | null
 }
 
+function trackedBranch(repo: string): string {
+  return TRACKED_REPOS.find((tracked) => tracked.repo === repo)?.branch ?? 'main'
+}
+
+/** The newest run of each workflow on the default branch: one request, no repo lookup first. */
 export const getRepoCi = cache(async (repo: string): Promise<Fetched<RepoCi>> => {
-  const info = await getRepo(repo)
-  if (!info.ok) return info
-  const branch = info.data.default_branch
-  const [onDefault, any] = await Promise.all([
-    gh<RawRuns>(`/repos/${repo}/actions/runs?branch=${encodeURIComponent(branch)}&per_page=30&exclude_pull_requests=true`),
-    gh<RawRuns>(`/repos/${repo}/actions/runs?per_page=10`),
-  ])
-  if (!onDefault.ok) return onDefault
+  const branch = trackedBranch(repo)
+  const runs = await gh<RawRuns>(`/repos/${repo}/actions/runs?branch=${encodeURIComponent(branch)}&per_page=30&exclude_pull_requests=true`)
+  if (!runs.ok) return runs
   const seen = new Set<string>()
   const latestByWorkflow: WorkflowRun[] = []
-  for (const run of onDefault.data.workflow_runs) {
+  for (const run of runs.data.workflow_runs) {
     // Dependabot's version-update jobs (event `dynamic`) are not the repo's CI.
     if (run.event === 'dynamic' || seen.has(run.name)) continue
     seen.add(run.name)
     latestByWorkflow.push(toRun(run))
   }
-  const newest = any.ok ? any.data.workflow_runs.find((run) => run.event !== 'dynamic') : undefined
-  return { ok: true, data: { repo, defaultBranch: branch, latestByWorkflow, latest: newest ? toRun(newest) : null } }
+  return { ok: true, data: { repo, defaultBranch: branch, latestByWorkflow } }
+})
+
+/** The newest run on any other branch (usually a pull request); only the CI page asks for it. */
+export const getLatestOtherRun = cache(async (repo: string): Promise<WorkflowRun | null> => {
+  const runs = await gh<RawRuns>(`/repos/${repo}/actions/runs?per_page=10`)
+  const branch = trackedBranch(repo)
+  const run = runs.ok ? runs.data.workflow_runs.find((item) => item.event !== 'dynamic' && item.head_branch !== branch) : undefined
+  return run ? toRun(run) : null
 })
 
 // ---------------------------------------------------------------------------

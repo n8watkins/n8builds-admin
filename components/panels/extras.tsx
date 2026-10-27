@@ -1,8 +1,9 @@
+import { LuGithub } from 'react-icons/lu'
 import { formatNumber, timeAgo } from '@/lib/format'
 import { getDependabotAlerts, getLatestDeployments, getLatestRelease, getMonthActivity, isGitHubConnected } from '@/lib/github'
 import { STATUS_PAGE, getDemoStatus } from '@/lib/openping'
-import { TRACKED_REPOS, shortName } from '@/lib/repos'
-import { BarList, Dot, PanelError, cx, errorMessage, type Tone } from '../ui'
+import { TRACKED_REPOS, shortName, vercelProjectUrl } from '@/lib/repos'
+import { Actions, BarList, Dot, ExternalAction, OutLink, PanelError, Stat, StatusPill, cx, errorMessage, type Tone } from '../ui'
 import { GitHubNotConnected } from './github'
 
 function stateTone(state: string): Tone {
@@ -13,11 +14,23 @@ function stateTone(state: string): Tone {
 }
 
 const BAR: Record<string, string> = {
-  up: 'bg-emerald-400/80',
-  down: 'bg-rose-400/90',
-  degraded: 'bg-amber-300/90',
-  none: 'bg-white/[0.07]',
+  up: 'bg-emerald-400',
+  down: 'bg-rose-400',
+  degraded: 'bg-amber-300',
+  none: 'bg-white/[0.08]',
 }
+
+const DEMO_STATE: Record<string, string> = {
+  operational: 'Online',
+  degraded: 'Slow',
+  down: 'Down',
+  maintenance: 'Maintenance',
+  suspended: 'Asleep',
+  scheduled_off: 'Asleep',
+}
+
+// ---------------------------------------------------------------------------
+// Live demos
 
 export async function DemoStatus() {
   let feed
@@ -27,65 +40,75 @@ export async function DemoStatus() {
     return <PanelError message={errorMessage(error)} />
   }
   return (
-    <div className="flex flex-1 flex-col gap-3">
-      <ul className="space-y-3">
-        {feed.services.map((service) => (
-          <li key={service.name}>
-            <div className="mb-1.5 flex items-center justify-between gap-3 text-[13px]">
-              <span className="flex items-center gap-2 font-medium text-slate-100">
-                <Dot tone={feed.offHours ? 'idle' : stateTone(service.state)} />
-                {service.name}
-              </span>
-              <span className="font-mono text-xs text-slate-400 tabular-nums">
-                {feed.offHours ? 'asleep' : service.state} {service.uptime90d !== null && <span className="text-slate-475">· {service.uptime90d.toFixed(1)}% 90d</span>}
-              </span>
-            </div>
-            <div className="flex h-4 gap-px" role="img" aria-label={`${service.name}: last 30 days of uptime`}>
-              {service.bars.map((bar) => (
-                <span key={bar.date} title={`${bar.date}: ${bar.uptimePct === null ? 'not checked' : `${bar.uptimePct}%`}`} className={cx('flex-1 rounded-[2px]', BAR[bar.state] ?? BAR.none)} />
-              ))}
-            </div>
-          </li>
-        ))}
+    <div className="flex flex-col gap-8">
+      <ul className="space-y-7">
+        {feed.services.map((service) => {
+          const tone = feed.offHours ? 'idle' : stateTone(service.state)
+          return (
+            <li key={service.name}>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-[17px] font-semibold text-slate-50">{service.name}</p>
+                <div className="flex items-center gap-3">
+                  {service.uptime90d !== null && <span className="text-[14px] text-slate-400 tabular-nums">{service.uptime90d.toFixed(1)}% uptime, 90 days</span>}
+                  <StatusPill tone={tone}>{feed.offHours ? 'Asleep (off-hours)' : (DEMO_STATE[service.state] ?? service.state)}</StatusPill>
+                </div>
+              </div>
+              <div className="flex h-8 gap-[3px]" role="img" aria-label={`${service.name}: the last 30 days of uptime`}>
+                {service.bars.map((bar) => (
+                  <span key={bar.date} title={`${bar.date}: ${bar.uptimePct === null ? 'scheduled off' : `${bar.uptimePct}% up`}`} className={cx('flex-1 rounded-[3px]', BAR[bar.state] ?? BAR.none)} />
+                ))}
+              </div>
+              <div className="mt-1.5 flex justify-between text-[13px] text-slate-400">
+                <span>30 days ago</span>
+                <span>Today</span>
+              </div>
+            </li>
+          )
+        })}
       </ul>
-      <p className="mt-auto text-xs text-slate-475">
-        {feed.updatedAt ? `Checked ${timeAgo(feed.updatedAt)}. ` : ''}Grey days are scheduled off-hours.{' '}
-        <a href={STATUS_PAGE} target="_blank" rel="noreferrer" className="text-cyan-300/90 hover:text-cyan-200">
-          Status page
-        </a>
-      </p>
+      <p className="text-[14px] text-slate-400">{feed.updatedAt ? `OpenPing last checked ${timeAgo(feed.updatedAt)}.` : ''} Grey days are scheduled off-hours; amber days had slow responses.</p>
+      <Actions>
+        <ExternalAction href={STATUS_PAGE} variant="primary">
+          Open the status page
+        </ExternalAction>
+        <ExternalAction href="https://openping.n8builds.dev">Open OpenPing</ExternalAction>
+        <ExternalAction href="https://portfolio.n8builds.dev">See the demos on the portfolio</ExternalAction>
+      </Actions>
     </div>
   )
 }
 
+// ---------------------------------------------------------------------------
+// Deploys, releases and activity
+
 export async function LatestDeploys() {
   if (!isGitHubConnected()) return <GitHubNotConnected />
-  const result = await getLatestDeployments(7)
+  const result = await getLatestDeployments(8)
   if (!result.ok) return <PanelError message={result.message} />
   return (
-    <ul className="-mx-2 divide-y divide-white/[0.04]">
-      {result.data.map((deploy) => (
-        <li key={`${deploy.repo}-${deploy.sha}-${deploy.createdAt}`} className="flex items-center gap-2.5 px-2 py-2 text-[13px]">
-          <Dot tone={stateTone(deploy.state ?? '')} label={deploy.state ?? 'unknown'} />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-slate-100">
-              {deploy.url ? (
-                <a href={deploy.url} target="_blank" rel="noreferrer" className="hover:text-cyan-300">
-                  {shortName(deploy.repo)}
-                </a>
-              ) : (
-                shortName(deploy.repo)
-              )}{' '}
-              <span className={cx('text-xs', deploy.environment.toLowerCase().startsWith('production') ? 'text-cyan-300' : 'text-slate-450')}>{deploy.environment}</span>
-            </p>
-            <p className="truncate font-mono text-[11px] text-slate-475">
-              {deploy.sha}
-              {deploy.ref && !deploy.ref.startsWith(deploy.sha) ? ` · ${deploy.ref}` : ''}
-            </p>
-          </div>
-          <span className="shrink-0 text-xs text-slate-450">{timeAgo(deploy.createdAt)}</span>
-        </li>
-      ))}
+    <ul className="-my-2 divide-y divide-white/[0.06]">
+      {result.data.map((deploy) => {
+        const project = vercelProjectUrl(deploy.repo)
+        const production = deploy.environment.toLowerCase().startsWith('production')
+        return (
+          <li key={`${deploy.repo}-${deploy.sha}-${deploy.createdAt}`} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-4">
+            <Dot tone={stateTone(deploy.state ?? '')} label={deploy.state ?? 'unknown'} />
+            <div className="min-w-0 flex-1">
+              <p className="text-[15px] font-medium text-slate-50">
+                {shortName(deploy.repo)}{' '}
+                <span className={cx('ml-1 rounded-md px-2 py-0.5 text-[13px] font-medium', production ? 'bg-teal-400/15 text-teal-200' : 'bg-white/[0.06] text-slate-300')}>{deploy.environment}</span>
+              </p>
+              <p className="mt-0.5 text-[14px] text-slate-400">
+                <span className="font-mono">{deploy.sha}</span> · {timeAgo(deploy.createdAt)}
+              </p>
+            </div>
+            <span className="flex gap-4 text-[14px]">
+              {deploy.url && <OutLink href={deploy.url}>Open deploy</OutLink>}
+              {project && <OutLink href={project}>Vercel</OutLink>}
+            </span>
+          </li>
+        )
+      })}
     </ul>
   )
 }
@@ -98,49 +121,21 @@ export async function LatestReleases() {
     .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
   const none = rows.filter(({ release }) => release.ok && !release.data).map(({ repo }) => shortName(repo))
   return (
-    <div className="flex flex-1 flex-col">
-      <ul className="-mx-2 divide-y divide-white/[0.04]">
+    <div className="flex flex-col gap-5">
+      <ul className="-my-2 divide-y divide-white/[0.06]">
         {released.map((release) => (
-          <li key={release.repo} className="flex items-center justify-between gap-3 px-2 py-2 text-[13px]">
-            <span className="min-w-0 truncate text-slate-100">{shortName(release.repo)}</span>
-            <span className="flex shrink-0 items-center gap-2">
-              <a href={release.url} target="_blank" rel="noreferrer" className="rounded bg-cyan-400/10 px-1.5 font-mono text-xs text-cyan-200 hover:bg-cyan-400/20">
-                {release.tag}
-              </a>
-              <span className="w-20 text-right text-xs text-slate-450">{timeAgo(release.publishedAt)}</span>
-            </span>
+          <li key={release.repo} className="flex flex-wrap items-center justify-between gap-3 py-4">
+            <div>
+              <p className="text-[15px] font-medium text-slate-50">{shortName(release.repo)}</p>
+              <p className="text-[14px] text-slate-400">{timeAgo(release.publishedAt)}</p>
+            </div>
+            <OutLink href={release.url} className="rounded-lg bg-teal-400/12 px-3 py-1.5 font-mono text-[14px] text-teal-100 hover:bg-teal-400/20 hover:text-teal-50">
+              {release.tag}
+            </OutLink>
           </li>
         ))}
       </ul>
-      {none.length > 0 && <p className="mt-auto pt-3 text-xs text-slate-475">No releases yet: {none.join(', ')}</p>}
-    </div>
-  )
-}
-
-export async function SecurityAlerts() {
-  if (!isGitHubConnected()) return <GitHubNotConnected />
-  const rows = await Promise.all(TRACKED_REPOS.map(async ({ repo }) => ({ repo, alerts: await getDependabotAlerts(repo) })))
-  const open = rows.reduce((sum, { alerts }) => sum + (alerts.ok && typeof alerts.data === 'number' ? alerts.data : 0), 0)
-  const disabled = rows.filter(({ alerts }) => alerts.ok && alerts.data === 'disabled').map(({ repo }) => shortName(repo))
-  const failed = rows.filter(({ alerts }) => !alerts.ok)
-  const withAlerts = rows.filter(({ alerts }) => alerts.ok && typeof alerts.data === 'number' && alerts.data > 0)
-  return (
-    <div className="flex flex-1 flex-col gap-3">
-      <div className="flex items-baseline gap-2">
-        <span className={cx('text-[26px] leading-tight font-semibold tabular-nums', open === 0 ? 'text-emerald-300' : 'text-rose-300')}>{open}</span>
-        <span className="text-[13px] text-slate-400">open Dependabot alerts</span>
-      </div>
-      {withAlerts.length > 0 && (
-        <BarList
-          rows={withAlerts.map(({ repo, alerts }) => ({ label: shortName(repo), value: alerts.ok && typeof alerts.data === 'number' ? alerts.data : 0 }))}
-        />
-      )}
-      {disabled.length > 0 && (
-        <p className="text-xs leading-relaxed text-amber-200/80">
-          Alerts are turned off for {disabled.join(', ')}. Turn them on in each repo&apos;s Settings, Code security.
-        </p>
-      )}
-      {failed.length > 0 && <p className="text-xs text-slate-475">Couldn&apos;t read {failed.map(({ repo }) => shortName(repo)).join(', ')}.</p>}
+      {none.length > 0 && <p className="text-[14px] leading-relaxed text-slate-400">No releases yet: {none.join(', ')}.</p>}
     </div>
   )
 }
@@ -154,31 +149,71 @@ export async function MonthActivity() {
   const capped = result.data.some((row) => row.capped)
   const month = new Date().toLocaleString('en-US', { month: 'long', timeZone: 'UTC' })
   return (
-    <div className="flex flex-1 flex-col gap-3">
-      <div className="flex gap-6">
-        <p className="text-[13px] text-slate-400">
-          <span className="block text-[26px] leading-tight font-semibold text-slate-50 tabular-nums">
-            {formatNumber(commits)}
-            {capped ? '+' : ''}
-          </span>
-          commits in {month}
-        </p>
-        <p className="text-[13px] text-slate-400">
-          <span className="block text-[26px] leading-tight font-semibold text-slate-50 tabular-nums">{releases}</span>
-          releases
-        </p>
+    <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-2 gap-6">
+        <Stat label={`Commits in ${month}`} value={`${formatNumber(commits)}${capped ? '+' : ''}`} hint="on default branches" />
+        <Stat label="Releases" value={releases} hint={`in ${month}`} />
       </div>
       <BarList
         rows={result.data.filter((row) => row.commits > 0).slice(0, 6).map((row) => ({ label: shortName(row.repo), value: row.commits }))}
         format={(value) => (value >= 100 ? '100+' : String(value))}
       />
-      <p className="mt-auto text-xs text-slate-475">
-        Default-branch commits, the raw feed behind{' '}
-        <a href="https://n8builds.dev/builds" target="_blank" rel="noreferrer" className="text-cyan-300/90 hover:text-cyan-200">
-          the build log
-        </a>
-        .
-      </p>
+      <Actions>
+        <ExternalAction href="https://n8builds.dev/builds">Open the build log</ExternalAction>
+      </Actions>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Security alerts
+
+export async function SecurityAlerts() {
+  if (!isGitHubConnected()) return <GitHubNotConnected />
+  const rows = await Promise.all(TRACKED_REPOS.map(async (tracked) => ({ tracked, alerts: await getDependabotAlerts(tracked.repo) })))
+  const open = rows.reduce((sum, { alerts }) => sum + (alerts.ok && typeof alerts.data === 'number' ? alerts.data : 0), 0)
+  const off = rows.filter(({ alerts }) => alerts.ok && alerts.data === 'disabled').length
+  return (
+    <div className="flex flex-col gap-8">
+      <div className="grid grid-cols-2 gap-6">
+        <Stat label="Open alerts" value={open} tone={open > 0 ? 'bad' : 'good'} hint="where alerts are on" />
+        <Stat label="Repos with alerts off" value={`${off} of ${rows.length}`} tone={off > 0 ? 'warn' : 'good'} hint={off > 0 ? 'these report nothing' : 'every repo is covered'} />
+      </div>
+      <ul className="-my-2 divide-y divide-white/[0.06]">
+        {rows.map(({ tracked, alerts }) => {
+          const disabled = alerts.ok && alerts.data === 'disabled'
+          const count = alerts.ok && typeof alerts.data === 'number' ? alerts.data : null
+          return (
+            <li key={tracked.repo} className="flex flex-wrap items-center justify-between gap-3 py-4">
+              <div className="min-w-0">
+                <p className="text-[15px] font-medium text-slate-50">{shortName(tracked.repo)}</p>
+                <p className="text-[14px] text-slate-400">{tracked.label}</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                {!alerts.ok ? (
+                  <StatusPill tone="idle">Couldn&apos;t read</StatusPill>
+                ) : disabled ? (
+                  <>
+                    <StatusPill tone="warn">Alerts off</StatusPill>
+                    <ExternalAction href={`https://github.com/${tracked.repo}/settings/security_analysis`} icon={LuGithub}>
+                      Turn on alerts
+                    </ExternalAction>
+                  </>
+                ) : count && count > 0 ? (
+                  <>
+                    <StatusPill tone="bad">{count} open</StatusPill>
+                    <ExternalAction href={`https://github.com/${tracked.repo}/security/dependabot`} variant="primary">
+                      Review alerts
+                    </ExternalAction>
+                  </>
+                ) : (
+                  <StatusPill tone="good">No open alerts</StatusPill>
+                )}
+              </div>
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }

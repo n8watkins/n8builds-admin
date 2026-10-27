@@ -23,6 +23,7 @@ Lets you sign in with GitHub; only your account (user ID 8055935) gets in.
 8. No scopes are requested: the app only learns which account signed in, and the dashboard revokes that token straight away.
 9. Rotating `ADMIN_SESSION_SECRET` signs every session out.
 
+Where: [GitHub OAuth Apps](https://github.com/settings/developers), [New OAuth App](https://github.com/settings/applications/new).
 Sets: `GITHUB_OAUTH_CLIENT_ID`, `GITHUB_OAUTH_CLIENT_SECRET`, `ADMIN_SESSION_SECRET`.
 
 ## 2. GitHub data: fine-grained tokens
@@ -42,6 +43,7 @@ Reads CI runs, Actions minutes, stars, repo traffic, releases, deploys and Depen
 11. If GitHub refuses the org billing report with the fine-grained token, a classic token with only `read:org` works for it instead.
 12. While you are there, turn on Dependabot alerts in each repo's Settings, Code security (the Security alerts page lists the repos that have them off).
 
+Where: [New fine-grained token](https://github.com/settings/personal-access-tokens/new), [Appturnity token policy](https://github.com/organizations/Appturnity/settings/personal-access-tokens).
 Sets: `GITHUB_TOKEN`, `GITHUB_ORG_TOKEN` (optional).
 
 ## 3. Website traffic: Google Analytics Data API
@@ -58,6 +60,7 @@ Reads visitors, countries, top pages, referrers, time on site and scroll depth f
 8. From the JSON file, set `client_email` as `GOOGLE_SA_CLIENT_EMAIL` and `private_key` as `GOOGLE_SA_PRIVATE_KEY` (paste it as it is, `\n` sequences included).
 9. Delete the downloaded JSON file once both values are in Vercel.
 
+Where: [Enable the Analytics Data API](https://console.cloud.google.com/apis/library/analyticsdata.googleapis.com), [Service accounts](https://console.cloud.google.com/iam-admin/serviceaccounts), [Google Analytics admin](https://analytics.google.com/analytics/web/#/admin).
 Sets: `GA4_PROPERTY_ID`, `GOOGLE_SA_CLIENT_EMAIL`, `GOOGLE_SA_PRIVATE_KEY`.
 
 ## 4. Errors: Sentry read-only token
@@ -71,6 +74,7 @@ Reads unresolved and new issues and error volume for the sites Sentry already wa
 5. Set the project slugs to watch, comma-separated (the n8builds-web and portfolio projects), as `SENTRY_PROJECTS`.
 6. Only if your org lives in Sentry's EU region, also set `SENTRY_API_BASE` to `https://de.sentry.io`.
 
+Where: [Sentry auth tokens](https://sentry.io/settings/account/api/auth-tokens/).
 Sets: `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECTS`, `SENTRY_API_BASE` (optional).
 
 ## 5. Counters and trends: a second Upstash database
@@ -84,6 +88,7 @@ Stores the daily snapshot (stars and minutes trends) and the Appturnity referral
 5. The daily snapshot (`/api/cron/snapshot`, 06:15 UTC, in `vercel.json`) starts on the first deploy, and trends fill in from the next day.
 6. The referral and contact counters also need a small change in n8builds-web (an agent task, not yet done), using the same two Upstash variables there.
 
+Where: [Upstash console](https://console.upstash.com/redis).
 Sets: `ANALYTICS_REDIS_REST_URL`, `ANALYTICS_REDIS_REST_TOKEN`, `CRON_SECRET`.
 
 ## 6. Hosting: Vercel project and admin.n8builds.dev
@@ -98,6 +103,8 @@ Puts the dashboard online at admin.n8builds.dev, behind GitHub sign-in.
 6. Open `https://admin.n8builds.dev`, sign in with GitHub, and check that this page shows everything connected.
 7. Optional check: sign in with any other GitHub account and see "This dashboard is private to its owner".
 
+Where: [New Vercel project](https://vercel.com/new), [New GitHub repo](https://github.com/new).
+
 ## 7. AI crawlers: Vercel AI Bots ruleset in Log mode
 
 Shows AI crawler traffic in Vercel's Firewall without blocking it or adding a counter of our own.
@@ -105,6 +112,8 @@ Shows AI crawler traffic in Vercel's Firewall without blocking it or adding a co
 1. In Vercel, open the n8builds-web project, Firewall.
 2. Under Bot Management (managed rulesets), turn on "AI Bots" and set its action to Log, not Deny.
 3. Repeat for the portfolio project if you want its crawlers logged too.
+
+Where: [n8builds-web Firewall](https://vercel.com/natkins23s-projects/n8builds-web/firewall).
 
 ## Environment variables
 

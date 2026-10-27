@@ -1,5 +1,5 @@
 import 'server-only'
-import { isDevBypassEnabled } from './auth/dev-bypass'
+import { signInSkipped } from './auth/bypass'
 import { getPersonalMinutes } from './github'
 import { SETUP_ITEMS, type SetupItem } from './setup'
 
@@ -26,8 +26,8 @@ export async function itemStatus(item: SetupItem): Promise<ItemStatus> {
   }
   const required = item.vars.filter((v) => !v.optional).map((v) => v.name)
   const missing = required.filter((name) => !isSet(name))
-  if (item.id === 'sign-in' && missing.length > 0 && isDevBypassEnabled()) {
-    return { state: 'partial', label: 'Bypassed locally', missing, note: 'The local preview skips sign-in; production needs these.' }
+  if (item.id === 'sign-in' && missing.length > 0 && signInSkipped()) {
+    return { state: 'partial', label: 'Bypassed locally', missing, note: 'This local copy skips sign-in; production needs these.' }
   }
   if (item.id === 'sign-in' && missing.length === 0 && (process.env.ADMIN_SESSION_SECRET?.length ?? 0) < 32) {
     return { state: 'partial', label: 'Secret too short', missing: [], note: '`ADMIN_SESSION_SECRET` needs at least 32 characters.' }

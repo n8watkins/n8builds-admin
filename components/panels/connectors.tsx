@@ -1,26 +1,28 @@
+import { LuBot } from 'react-icons/lu'
 import { formatDuration, formatNumber, formatPercent, timeAgo } from '@/lib/format'
 import { ga4Config, getTraffic } from '@/lib/ga4'
+import { VERCEL_TEAM } from '@/lib/repos'
 import { getSentrySummary, sentryConfig } from '@/lib/sentry'
 import { isStoreConnected, readDailyCounts, readDailyHashTotals, readSnapshots } from '@/lib/store'
-import { ExternalIcon } from '../icons'
 import { Sparkline } from '../Sparkline'
-import { BarList, NotConnected, PanelError, Stat, errorMessage } from '../ui'
+import { Actions, BarList, ExternalAction, NotConnected, OutLink, PanelError, Stat, errorMessage } from '../ui'
 
 const STORE_VARS = ['ANALYTICS_REDIS_REST_URL', 'ANALYTICS_REDIS_REST_TOKEN']
+const code = 'rounded bg-white/[0.07] px-1.5 py-0.5 font-mono text-[0.9em] text-slate-100'
 
 // ---------------------------------------------------------------------------
-// 02 Sentry
+// Errors (Sentry)
 
 export async function SentryPanel() {
   const config = sentryConfig()
   if (!config) {
     return (
       <NotConnected
-        why="Sentry already collects errors from n8builds.dev (and the portfolio). Reading them back needs a read-only token; the dashboard never writes to Sentry."
-        willShow={['Unresolved issues', 'New this week', 'Events per issue', 'Errors in 30 days vs the free 5k']}
+        why="Sentry already records errors from n8builds.dev and the portfolio. Showing them here needs a read-only token; the dashboard never changes anything in Sentry."
+        willShow={['Unresolved issues', 'New this week', 'Events per issue', 'Errors this month vs the free 5,000']}
         needs={['SENTRY_AUTH_TOKEN', 'SENTRY_ORG', 'SENTRY_PROJECTS']}
-        plan={['Create a personal token with only org:read, project:read and event:read.', 'Set the org slug and the project slugs (comma-separated) next to it.']}
         setupId="sentry"
+        actions={<ExternalAction href="https://sentry.io/settings/account/api/auth-tokens/">Create a Sentry token</ExternalAction>}
       />
     )
   }
@@ -31,44 +33,50 @@ export async function SentryPanel() {
     return <PanelError message={errorMessage(error)} />
   }
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-3 gap-4">
+    <div className="flex flex-col gap-8">
+      <div className="grid grid-cols-2 gap-6 sm:grid-cols-3">
         <Stat label="Unresolved" value={formatNumber(summary.unresolved.length)} />
-        <Stat label="New 7d" value={formatNumber(summary.newThisWeek)} />
-        <Stat label="Errors 30d" value={summary.errors30d === null ? 'n/a' : formatNumber(summary.errors30d)} hint="free plan: 5k / month" />
+        <Stat label="New this week" value={formatNumber(summary.newThisWeek)} tone={summary.newThisWeek > 0 ? 'warn' : 'good'} />
+        <Stat label="Errors, 30 days" value={summary.errors30d === null ? 'n/a' : formatNumber(summary.errors30d)} hint="free plan: 5,000 a month" />
       </div>
-      <ul className="-mx-2 divide-y divide-white/[0.04]">
-        {summary.unresolved.slice(0, 6).map((issue) => (
-          <li key={issue.id} className="px-2 py-2 text-[13px]">
-            <a href={issue.url} target="_blank" rel="noreferrer" className="block truncate text-slate-100 hover:text-cyan-300">
+      <ul className="-my-2 divide-y divide-white/[0.06]">
+        {summary.unresolved.slice(0, 8).map((issue) => (
+          <li key={issue.id} className="py-4">
+            <OutLink href={issue.url} className="text-[15px] font-medium text-slate-50 hover:text-cyan-200">
               {issue.title}
-            </a>
-            <p className="font-mono text-[11px] text-slate-475">
-              {issue.shortId} · {formatNumber(issue.events)} events · {issue.users} users · last {timeAgo(issue.lastSeen)}
+            </OutLink>
+            <p className="mt-1 text-[14px] text-slate-400">
+              <span className="font-mono">{issue.shortId}</span> · {formatNumber(issue.events)} events · {issue.users} users · last seen {timeAgo(issue.lastSeen)}
             </p>
           </li>
         ))}
       </ul>
+      <Actions>
+        <ExternalAction href={`https://${summary.org}.sentry.io/issues/`} variant="primary">
+          View on Sentry
+        </ExternalAction>
+      </Actions>
     </div>
   )
 }
 
 // ---------------------------------------------------------------------------
-// 03 Traffic
+// Website traffic (GA4)
 
 export async function TrafficPanel() {
   if (!ga4Config()) {
     return (
       <NotConnected
-        why="Google Analytics (G-JZQGKY9Q37) already collects visits for all of n8builds.dev, subdomains included. Reading them needs a Google Cloud service account with Viewer access on the GA4 property."
-        willShow={['Visitors (28 days)', 'Countries', 'Top pages', 'Referrers', 'Time on site', 'Scroll depth (90% reached)']}
+        why="Google Analytics (G-JZQGKY9Q37) already counts visits for all of n8builds.dev, subdomains included. Reading them here needs a Google Cloud service account with Viewer access to that property."
+        willShow={['Visitors, 28 days', 'Countries', 'Top pages', 'Referrers', 'Time on site', 'Scroll depth']}
         needs={['GA4_PROPERTY_ID', 'GOOGLE_SA_CLIENT_EMAIL', 'GOOGLE_SA_PRIVATE_KEY']}
-        plan={[
-          'Enable the Google Analytics Data API in a Google Cloud project and create a service account with a JSON key.',
-          'Add its email as a Viewer on the GA4 property (Admin, Property access management).',
-          'Set the numeric property ID (not the G- measurement ID) and the key\'s two fields in Vercel.',
-        ]}
         setupId="ga4"
+        actions={
+          <>
+            <ExternalAction href="https://analytics.google.com/analytics/web/">Open Google Analytics</ExternalAction>
+            <ExternalAction href="https://console.cloud.google.com/iam-admin/serviceaccounts">Google Cloud service accounts</ExternalAction>
+          </>
+        }
       />
     )
   }
@@ -79,49 +87,56 @@ export async function TrafficPanel() {
     return <PanelError message={errorMessage(error)} />
   }
   return (
-    <div className="flex flex-col gap-5">
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <Stat label="Visitors 28d" value={formatNumber(traffic.visitors)} hint={`${formatNumber(traffic.pageViews)} page views`} />
-        <Stat label="Avg session" value={formatDuration(traffic.avgSessionSeconds)} />
-        <Stat label="Engaged" value={formatPercent(traffic.engagementRate)} />
-        <Stat label="Scrolled 90%" value={traffic.scrolledShare === null ? 'n/a' : formatPercent(traffic.scrolledShare)} hint="of page views" />
+    <div className="flex flex-col gap-8">
+      <div className="grid grid-cols-2 gap-6 lg:grid-cols-4">
+        <Stat label="Visitors" value={formatNumber(traffic.visitors)} hint={`${formatNumber(traffic.pageViews)} page views`} />
+        <Stat label="Average visit" value={formatDuration(traffic.avgSessionSeconds)} />
+        <Stat label="Engaged visits" value={formatPercent(traffic.engagementRate)} hint="10s+, or 2+ pages" />
+        <Stat label="Scrolled to the end" value={traffic.scrolledShare === null ? 'n/a' : formatPercent(traffic.scrolledShare)} hint="of page views (90%)" />
       </div>
-      <div className="grid gap-5 sm:grid-cols-3">
+      <div className="grid gap-8 lg:grid-cols-3">
         {(
           [
             ['Top pages', traffic.pages],
-            ['Referrers', traffic.referrers],
+            ['Where visitors come from', traffic.referrers],
             ['Countries', traffic.countries],
           ] as const
         ).map(([title, rows]) => (
           <div key={title} className="min-w-0">
-            <p className="mb-2 text-[11px] font-medium tracking-wide text-slate-450 uppercase">{title}</p>
+            <p className="mb-3 text-[15px] font-medium text-slate-200">{title}</p>
             <BarList rows={[...rows]} format={formatNumber} />
           </div>
         ))}
       </div>
+      <Actions>
+        <ExternalAction href="https://analytics.google.com/analytics/web/" variant="primary">
+          Open Google Analytics
+        </ExternalAction>
+      </Actions>
     </div>
   )
 }
 
 // ---------------------------------------------------------------------------
-// 04 Referrals to Appturnity
+// Referrals to Appturnity
+
+const REFERRAL_PLAN = [
+  <>n8builds-web tags each Appturnity link with its placement (hero ad, &quot;Two ways&quot; card, footer, navbar) and adds <code className={code}>utm_source=n8builds</code>.</>,
+  <>A small click listener, loaded after the page, sends <code className={code}>navigator.sendBeacon(&apos;/api/ref&apos;)</code>, so the click is never slowed down.</>,
+  <>The route checks the placement against an allow-list and adds one to <code className={code}>ref:appturnity:&lt;date&gt;</code> in the analytics database. No IP, ID or cookie.</>,
+  'The same click also sends a Google Analytics event (appturnity_click) as a cross-check, and the utm tags show up in Appturnity\'s own analytics.',
+]
 
 export async function ReferralsPanel() {
-  const plan = [
-    <>n8builds-web tags each Appturnity link with its placement (hero ad, &quot;Two ways&quot; card, footer, navbar) and adds <code className="font-mono text-xs text-slate-300">utm_source=n8builds</code>.</>,
-    <>One idle-loaded click listener sends <code className="font-mono text-xs text-slate-300">navigator.sendBeacon(&apos;/api/ref&apos;)</code>; the click is never delayed.</>,
-    <>The route checks the placement against an allow-list and runs <code className="font-mono text-xs text-slate-300">HINCRBY ref:appturnity:&lt;date&gt;</code> in the analytics database. No IP, no ID, no cookie.</>,
-    'The same click also sends a GA event (appturnity_click) as a cross-check, and the utm tags show up in Appturnity\'s own analytics.',
-  ]
   if (!isStoreConnected()) {
     return (
       <NotConnected
-        why="Counts the visitors n8builds.dev sends to appturnity.com. A first-party daily count works with ad blockers and without Google's cookies; Google Analytics alone would miss many."
-        willShow={['Clicks today, 7 and 30 days', 'By placement', '30-day trend']}
+        why="Counting our own clicks works even with ad blockers and without Google's cookies; Google Analytics alone would miss many of them."
+        willShow={['Clicks today, 7 and 30 days', 'Which placement works best', '30-day trend']}
         needs={STORE_VARS}
-        plan={plan}
+        plan={REFERRAL_PLAN}
         setupId="upstash"
+        actions={<ExternalAction href="https://appturnity.com">Open appturnity.com</ExternalAction>}
       />
     )
   }
@@ -133,13 +148,13 @@ export async function ReferralsPanel() {
   }
   const total = days.reduce((sum, day) => sum + day.total, 0)
   if (total === 0) {
-    return <NotConnected title="Waiting for the counter" why="The analytics database is connected, but n8builds-web doesn't count Appturnity clicks yet." plan={plan} />
+    return <NotConnected title="Waiting for the counter" why="The analytics database is connected, but n8builds-web doesn't count Appturnity clicks yet." plan={REFERRAL_PLAN} />
   }
   const byPlacement = new Map<string, number>()
   for (const day of days) for (const [field, value] of Object.entries(day.byField)) byPlacement.set(field, (byPlacement.get(field) ?? 0) + value)
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-3 gap-4">
+    <div className="flex flex-col gap-8">
+      <div className="grid grid-cols-3 gap-6">
         <Stat label="Today" value={formatNumber(days.at(-1)?.total ?? 0)} />
         <Stat label="7 days" value={formatNumber(days.slice(-7).reduce((sum, day) => sum + day.total, 0))} />
         <Stat label="30 days" value={formatNumber(total)} />
@@ -151,21 +166,23 @@ export async function ReferralsPanel() {
 }
 
 // ---------------------------------------------------------------------------
-// 05 Contact messages
+// Contact messages
+
+const CONTACT_PLAN = [
+  <>After a message is delivered, n8builds-web&apos;s contact route adds one to <code className={code}>contact:sent:&lt;date&gt;</code> in the analytics database.</>,
+  'A failed count never fails the send, and the counter lives apart from the form\'s rate-limit database so it can\'t use up its quota.',
+]
 
 export async function ContactPanel() {
-  const plan = [
-    <>After a message is delivered, n8builds-web&apos;s contact route runs <code className="font-mono text-xs text-slate-300">INCR contact:sent:&lt;date&gt;</code> in the analytics database.</>,
-    'A failed count never fails the send, and the counter lives apart from the form\'s rate-limit database so it can\'t use up its quota.',
-  ]
   if (!isStoreConnected()) {
     return (
       <NotConnected
-        why="How many contact messages arrived, without opening Gmail. Only a daily number is stored, never the message."
-        willShow={['Messages this week and month', 'Against the 50 / day cap']}
+        why="Shows how many people wrote in, without opening Gmail. Only a daily number is stored, never the message."
+        willShow={['Messages this week and month', 'Against the 50-a-day cap']}
         needs={STORE_VARS}
-        plan={plan}
+        plan={CONTACT_PLAN}
         setupId="upstash"
+        actions={<ExternalAction href="https://mail.google.com">Open Gmail</ExternalAction>}
       />
     )
   }
@@ -176,10 +193,10 @@ export async function ContactPanel() {
     return <PanelError message={errorMessage(error)} />
   }
   const total = days.reduce((sum, day) => sum + day.count, 0)
-  if (total === 0) return <NotConnected title="Waiting for the counter" why="The analytics database is connected, but n8builds-web doesn't count sent messages yet (or none arrived in 30 days)." plan={plan} />
+  if (total === 0) return <NotConnected title="Waiting for the counter" why="The analytics database is connected, but n8builds-web doesn't count sent messages yet (or none arrived in 30 days)." plan={CONTACT_PLAN} />
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-4">
+    <div className="flex flex-col gap-8">
+      <div className="grid grid-cols-2 gap-6">
         <Stat label="7 days" value={formatNumber(days.slice(-7).reduce((sum, day) => sum + day.count, 0))} />
         <Stat label="30 days" value={formatNumber(total)} />
       </div>
@@ -189,21 +206,19 @@ export async function ContactPanel() {
 }
 
 // ---------------------------------------------------------------------------
-// 06 Trends
+// Trends (daily snapshot)
 
 export async function TrendsPanel() {
-  const plan = [
-    <>Vercel Cron calls <code className="font-mono text-xs text-slate-300">/api/cron/snapshot</code> daily at 06:15 UTC with the CRON_SECRET (already built, in vercel.json).</>,
-    <>It saves stars per repo and this month&apos;s minutes as <code className="font-mono text-xs text-slate-300">snapshot:&lt;date&gt;</code>, kept 400 days.</>,
-    'This card then draws the last 30 days, so trends outlive GitHub\'s 14-day windows.',
-  ]
   if (!isStoreConnected()) {
     return (
       <NotConnected
-        why="Stars and Actions minutes over time (&quot;+3 stars this week&quot;). GitHub only keeps the current numbers, so the dashboard saves one snapshot a day."
-        willShow={['Stars, 30-day trend', 'Minutes used, by day', 'Week-over-week change']}
+        why="GitHub only keeps today's numbers, so the dashboard saves one snapshot a day to show stars and minutes over time."
+        willShow={['Stars over 30 days', 'Minutes used by day', 'Change this week']}
         needs={[...STORE_VARS, 'CRON_SECRET']}
-        plan={plan}
+        plan={[
+          <>Vercel Cron calls <code className={code}>/api/cron/snapshot</code> daily at 06:15 UTC (already built, in vercel.json).</>,
+          <>It saves stars per repo and this month&apos;s minutes as <code className={code}>snapshot:&lt;date&gt;</code>, kept 400 days.</>,
+        ]}
         setupId="upstash"
       />
     )
@@ -217,12 +232,12 @@ export async function TrendsPanel() {
   const stars = snapshots.map((snap) => (snap ? Object.values(snap.stars).reduce((sum, value) => sum + value, 0) : null))
   const minutes = snapshots.map((snap) => snap?.minutes.appturnity ?? null)
   const known = stars.filter((value): value is number => value !== null)
-  if (known.length === 0) return <NotConnected title="Waiting for the first snapshot" why="The database is connected; the first daily snapshot lands after the cron's next run (or open /api/cron/snapshot while signed in)." />
+  if (known.length === 0) return <NotConnected title="Waiting for the first snapshot" why="The database is connected; the first snapshot lands after the cron's next run (or open /api/cron/snapshot while signed in)." />
   const weekAgo = stars.at(-8) ?? known[0]
   const change = (known.at(-1) ?? 0) - (weekAgo ?? 0)
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-4">
+    <div className="flex flex-col gap-8">
+      <div className="grid grid-cols-2 gap-6">
         <Stat label="Stars" value={formatNumber(known.at(-1) ?? 0)} hint={`${change >= 0 ? '+' : ''}${change} this week`} />
         <Stat label="Appturnity minutes" value={formatNumber(minutes.filter((value): value is number => value !== null).at(-1) ?? 0)} hint="this month so far" />
       </div>
@@ -233,22 +248,22 @@ export async function TrendsPanel() {
 }
 
 // ---------------------------------------------------------------------------
-// 07 AI crawlers (a link, by the owner's call)
+// AI crawlers (a link, by the owner's call)
 
 export function AiCrawlersCard() {
   return (
-    <div className="flex flex-1 flex-col gap-3">
-      <p className="text-[13px] leading-relaxed text-slate-400">
-        Vercel&apos;s Firewall shows AI crawler traffic once the <b className="font-semibold text-slate-200">AI Bots</b> managed ruleset is on in <b className="font-semibold text-slate-200">Log</b> mode: it logs GPTBot, ClaudeBot and friends without blocking them. No counter of our own, so crawler hits cost nothing extra.
+    <div className="flex flex-col gap-5">
+      <p className="flex items-start gap-3 text-[15px] leading-relaxed text-slate-300">
+        <LuBot aria-hidden className="mt-0.5 size-5 shrink-0 text-blue-300" />
+        <span>
+          Vercel&apos;s Firewall shows AI crawlers (GPTBot, ClaudeBot and others) once its <b className="font-semibold text-slate-100">AI Bots</b> ruleset is on in <b className="font-semibold text-slate-100">Log</b> mode, which records them without blocking. No counter of our own, so crawler visits cost nothing extra.
+        </span>
       </p>
-      <a
-        href="https://vercel.com/natkins23s-projects/n8builds-web/firewall"
-        target="_blank"
-        rel="noreferrer"
-        className="mt-auto inline-flex w-fit items-center gap-1.5 rounded-lg bg-cyan-400/10 px-3 py-1.5 text-[13px] font-medium text-cyan-200 transition-colors hover:bg-cyan-400/20">
-        Open the Vercel Firewall
-        <ExternalIcon />
-      </a>
+      <Actions>
+        <ExternalAction href={`https://vercel.com/${VERCEL_TEAM}/n8builds-web/firewall`} variant="primary">
+          Open the Vercel Firewall
+        </ExternalAction>
+      </Actions>
     </div>
   )
 }

@@ -17,9 +17,10 @@ export function renderSetupMarkdown(intro: string[], items: SetupItem[], localOn
   items.forEach((item, index) => {
     lines.push(`## ${index + 1}. ${item.title}`, '', item.why, '')
     item.steps.forEach((step, stepIndex) => lines.push(`${stepIndex + 1}. ${step}`))
-    if (item.vars.length > 0) {
-      lines.push('', `Sets: ${item.vars.map((v) => `\`${v.name}\`${v.optional ? ' (optional)' : ''}`).join(', ')}.`)
-    }
+    const meta: string[] = []
+    if (item.links.length > 0) meta.push(`Where: ${item.links.map((link) => `[${link.label}](${link.href})`).join(', ')}.`)
+    if (item.vars.length > 0) meta.push(`Sets: ${item.vars.map((v) => `\`${v.name}\`${v.optional ? ' (optional)' : ''}`).join(', ')}.`)
+    if (meta.length > 0) lines.push('', ...meta)
     lines.push('')
   })
   lines.push('## Environment variables', '', '| Variable | Step | Where |', '| --- | --- | --- |')

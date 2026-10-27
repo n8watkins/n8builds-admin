@@ -2,21 +2,23 @@ import type { Metadata } from 'next'
 import { SecurityAlerts } from '@/components/panels/extras'
 import { Slot } from '@/components/Slot'
 import { PageHeader, Panel } from '@/components/ui'
+import { AREAS } from '@/lib/areas'
 import { requireOwner } from '@/lib/auth/owner'
 
-export const metadata: Metadata = { title: 'Security alerts' }
+const area = AREAS.security
 
-export default async function SecurityPage() {
-  // The layout and the proxy check too; every page checks on its own as well.
+export const metadata: Metadata = { title: area.label }
+
+export default async function Page() {
+  // The proxy and the layout check too; every page checks on its own as well.
   await requireOwner()
   return (
     <>
       <PageHeader
-        title="Security alerts"
-        description="Open Dependabot alerts across the tracked repos."
+        area={area}
       />
-      <Panel id="security" title="Dependabot" className="max-w-3xl">
-        <Slot rows={3}>
+      <Panel id="security" title="Dependabot, by repo" description="Turn alerts on where they're off; each button opens that repo's security settings on GitHub.">
+        <Slot rows={6}>
           <SecurityAlerts />
         </Slot>
       </Panel>

@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import icon from '@/assets/n8-icon.png'
-import { GitHubIcon } from '@/components/icons'
+import { LuGithub } from 'react-icons/lu'
 import { getOwner } from '@/lib/auth/owner'
 import { isAuthConfigured } from '@/lib/auth/tokens'
 
@@ -38,11 +38,11 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <a
             href="/api/auth/login"
             className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-slate-50 px-4 py-2.5 text-sm font-semibold text-darkBlue transition-colors hover:bg-cyan-100">
-            <GitHubIcon />
+            <LuGithub aria-hidden className="size-5" />
             Sign in with GitHub
           </a>
         ) : (
-          !error && <p className="mt-6 text-[13px] text-slate-450">{ERRORS['not-configured']}</p>
+          !error && <p className="mt-6 text-[15px] text-slate-400">{ERRORS['not-configured']}</p>
         )}
       </div>
     </main>

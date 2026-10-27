@@ -1,26 +1,34 @@
 import type { Metadata } from 'next'
-import { ActionsMinutes } from '@/components/panels/github'
+import { OrgMinutes, PersonalMinutes } from '@/components/panels/github'
 import { Slot } from '@/components/Slot'
 import { PageHeader, Panel } from '@/components/ui'
+import { AREAS } from '@/lib/areas'
 import { requireOwner } from '@/lib/auth/owner'
 
-export const metadata: Metadata = { title: 'Actions minutes' }
+const area = AREAS.minutes
 
-export default async function MinutesPage() {
-  // The layout and the proxy check too; every page checks on its own as well.
+export const metadata: Metadata = { title: area.label }
+
+export default async function Page() {
+  // The proxy and the layout check too; every page checks on its own as well.
   await requireOwner()
   return (
     <>
       <PageHeader
-        title="Actions minutes"
-        description="Minutes used this month against the free 2,000 for the Appturnity org and the personal account. Public repos are free and not counted."
-        source={{ label: 'Billing', href: 'https://github.com/organizations/Appturnity/settings/billing/usage' }}
+        area={area}
       />
-      <Panel id="minutes" title="This month" className="max-w-3xl">
-        <Slot>
-          <ActionsMinutes />
-        </Slot>
-      </Panel>
+      <div className="grid gap-6 xl:grid-cols-5">
+        <Panel id="org" title="Appturnity org" description="Billed to the Appturnity organization. Its private monorepo-app uses these minutes." className="xl:col-span-3">
+          <Slot>
+            <OrgMinutes />
+          </Slot>
+        </Panel>
+        <Panel id="personal" title="Your personal account" description="The n8watkins account. The n8builds repos are public, so they use none of it." className="xl:col-span-2">
+          <Slot rows={3}>
+            <PersonalMinutes />
+          </Slot>
+        </Panel>
+      </div>
     </>
   )
 }

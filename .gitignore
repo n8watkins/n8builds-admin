@@ -1,6 +1,8 @@
 /node_modules
 /coverage
 /.next/
+/.next-e2e/
+/.lighthouse/
 /out/
 .DS_Store
 *.pem

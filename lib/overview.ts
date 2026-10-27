@@ -1,66 +1,81 @@
 import 'server-only'
+import { unstable_cache } from 'next/cache'
+import type { AreaId } from './areas'
+import { REVALIDATE_SECONDS } from './cache'
 import { formatNumber } from './format'
 import { ga4Config, getTraffic } from './ga4'
-import {
-  getDependabotAlerts,
-  getLatestDeployments,
-  getLatestRelease,
-  getOrgMinutes,
-  getRepo,
-  getRepoCi,
-  getViews,
-  isGitHubConnected,
-  type WorkflowRun,
-} from './github'
+import { getDependabotAlerts, getLatestDeployments, getOrgMinutes, getRepo, getRepoCi, getViews, isGitHubConnected, type WorkflowRun } from './github'
 import { getDemoStatus } from './openping'
 import { APPTURNITY_ORG, FREE_ACTIONS_MINUTES, TRACKED_REPOS, shortName } from './repos'
 import { getSentrySummary, sentryConfig } from './sentry'
 import { isStoreConnected, readDailyCounts, readDailyHashTotals, readSnapshots } from './store'
 
 /**
- * One line per area for the Overview: a headline, a short detail and a tone.
- * `bad` and `warn` float to the top as "Needs attention"; the rest stay quiet.
+ * One headline per area for the Overview. It reads only what each headline
+ * needs (no detail data), and the whole list is cached for five minutes and
+ * served stale while it refreshes, so the Overview is fast after the first
+ * load. `bad` and `warn` float to the top as "Needs attention".
  */
 export type Tone = 'bad' | 'warn' | 'good' | 'quiet' | 'off'
 
-export type Summary = { href: string; label: string; headline: string; detail: string; tone: Tone }
+export type Summary = {
+  area: AreaId
+  /** A second card for the same area (Stars and Views share a page). */
+  key: string
+  label?: string
+  headline: string
+  detail: string
+  /** Short state, shown as a pill. */
+  status: string
+  tone: Tone
+  /** The one most useful place to go outside the admin. */
+  action?: { label: string; href: string }
+}
+
+/** The slowest source may not hold up the whole Overview on a cold cache. */
+const SOURCE_TIMEOUT_MS = 6000
 
 export function isFailing(run: Pick<WorkflowRun, 'status' | 'conclusion'>): boolean {
   return run.status === 'completed' && ['failure', 'timed_out', 'startup_failure'].includes(run.conclusion ?? '')
 }
 
-const notConnected = (href: string, label: string, detail: string): Summary => ({ href, label, headline: 'Not connected', detail, tone: 'off' })
-const noGitHub = (href: string, label: string) => notConnected(href, label, 'Needs a GitHub token')
+const notConnected = (area: AreaId, detail: string): Summary => ({ area, key: area, headline: 'Not connected', detail, status: 'Not connected', tone: 'off' })
 
 async function ci(): Promise<Summary> {
-  const base = { href: '/ci', label: 'CI' }
-  if (!isGitHubConnected()) return noGitHub(base.href, base.label)
+  if (!isGitHubConnected()) return notConnected('ci', 'Needs a GitHub token')
   const results = await Promise.all(TRACKED_REPOS.map(({ repo }) => getRepoCi(repo)))
-  const failingRepos = results.flatMap((result) => (result.ok && result.data.latestByWorkflow.some(isFailing) ? [shortName(result.data.repo)] : []))
   const runs = results.flatMap((result) => (result.ok ? result.data.latestByWorkflow : []))
-  const failing = runs.filter(isFailing).length
-  if (failing === 0) return { ...base, headline: 'All green', detail: `${runs.length} workflows on default branches`, tone: 'good' }
-  return { ...base, headline: `${failing} failing`, detail: failingRepos.join(', '), tone: 'bad' }
+  const failingRuns = runs.filter(isFailing)
+  const failingRepos = results.flatMap((result) => (result.ok && result.data.latestByWorkflow.some(isFailing) ? [shortName(result.data.repo)] : []))
+  if (failingRuns.length === 0) return { area: 'ci', key: 'ci', headline: 'All passing', detail: `${runs.length} workflows across ${TRACKED_REPOS.length} repos`, status: 'Passing', tone: 'good' }
+  return {
+    area: 'ci',
+    key: 'ci',
+    headline: `${failingRuns.length} failing`,
+    detail: `In ${failingRepos.join(', ')}`,
+    status: 'Failing',
+    tone: 'bad',
+    action: { label: 'Open the failing run', href: failingRuns[0].url },
+  }
 }
 
 async function minutes(): Promise<Summary> {
-  const base = { href: '/minutes', label: 'Actions minutes' }
-  if (!isGitHubConnected()) return noGitHub(base.href, base.label)
+  if (!isGitHubConnected()) return notConnected('minutes', 'Needs a GitHub token')
   const org = await getOrgMinutes()
-  if (!org.ok) return { ...base, headline: 'Unavailable', detail: org.message, tone: 'warn' }
+  if (!org.ok) return { area: 'minutes', key: 'minutes', headline: 'Unavailable', detail: org.message, status: 'Error', tone: 'warn' }
   const share = org.data.total / FREE_ACTIONS_MINUTES
-  const headline = `${formatNumber(org.data.total)} / ${formatNumber(FREE_ACTIONS_MINUTES)}`
-  if (share >= 1) return { ...base, headline, detail: `${APPTURNITY_ORG}: all free minutes used`, tone: 'bad' }
-  if (share >= 0.7) return { ...base, headline, detail: `${APPTURNITY_ORG}: ${Math.round(share * 100)}% used`, tone: 'warn' }
-  return { ...base, headline, detail: `${APPTURNITY_ORG} this month`, tone: 'quiet' }
+  const action = { label: 'Open Appturnity billing on GitHub', href: `https://github.com/organizations/${APPTURNITY_ORG}/settings/billing` }
+  const base = { area: 'minutes' as const, key: 'minutes', headline: `${formatNumber(org.data.total)} / ${formatNumber(FREE_ACTIONS_MINUTES)}`, action }
+  if (share >= 1) return { ...base, detail: `${APPTURNITY_ORG} has used all its free minutes this month`, status: 'Used up', tone: 'bad' }
+  if (share >= 0.7) return { ...base, detail: `${APPTURNITY_ORG} has used ${Math.round(share * 100)}% this month`, status: 'Running low', tone: 'warn' }
+  return { ...base, detail: `${APPTURNITY_ORG} minutes used this month`, status: 'Fine', tone: 'quiet' }
 }
 
 async function stars(): Promise<Summary> {
-  const base = { href: '/repos', label: 'Stars' }
-  if (!isGitHubConnected()) return noGitHub(base.href, base.label)
+  if (!isGitHubConnected()) return notConnected('repos', 'Needs a GitHub token')
   const repos = await Promise.all(TRACKED_REPOS.map(({ repo }) => getRepo(repo)))
   const total = repos.reduce((sum, repo) => sum + (repo.ok ? repo.data.stargazers_count : 0), 0)
-  let detail = 'Weekly change once daily snapshots start'
+  let detail = `Across ${TRACKED_REPOS.length} repos. Weekly change starts with the daily snapshot.`
   if (isStoreConnected()) {
     const snapshots = await readSnapshots(8).catch(() => [])
     const weekAgo = snapshots[0]
@@ -69,107 +84,132 @@ async function stars(): Promise<Summary> {
       detail = `${change >= 0 ? '+' : ''}${change} this week`
     }
   }
-  return { ...base, headline: formatNumber(total), detail, tone: 'quiet' }
+  return { area: 'repos', key: 'stars', label: 'Stars', headline: formatNumber(total), detail, status: 'Stars', tone: 'quiet' }
 }
 
 async function views(): Promise<Summary> {
-  const base = { href: '/repos', label: 'Repo views 14d' }
-  if (!isGitHubConnected()) return noGitHub(base.href, base.label)
+  if (!isGitHubConnected()) return notConnected('repos', 'Needs a GitHub token')
   const results = await Promise.all(TRACKED_REPOS.map(({ repo }) => getViews(repo)))
   const total = results.reduce((sum, view) => sum + (view.ok ? view.data.count : 0), 0)
   const uniques = results.reduce((sum, view) => sum + (view.ok ? view.data.uniques : 0), 0)
-  return { ...base, headline: formatNumber(total), detail: `${formatNumber(uniques)} unique visitors`, tone: 'quiet' }
+  return { area: 'repos', key: 'views', label: 'Repo views, 14 days', headline: formatNumber(total), detail: `${formatNumber(uniques)} unique visitors on GitHub`, status: '14 days', tone: 'quiet' }
 }
 
 async function demos(): Promise<Summary> {
-  const base = { href: '/demos', label: 'Live demos' }
   const feed = await getDemoStatus()
   const total = feed.services.length
-  if (feed.offHours) return { ...base, headline: 'Asleep', detail: 'Off-hours: OpenPing isn\'t checking', tone: 'quiet' }
+  const action = { label: 'Open the status page', href: 'https://openping.n8builds.dev/status' }
+  if (feed.offHours) return { area: 'demos', key: 'demos', headline: 'Asleep', detail: 'Off-hours: OpenPing isn\'t checking right now', status: 'Off-hours', tone: 'quiet', action }
   const down = feed.services.filter((service) => service.state === 'down').map((service) => service.name)
-  if (down.length > 0) return { ...base, headline: `${down.length} down`, detail: down.join(', '), tone: 'bad' }
+  if (down.length > 0) return { area: 'demos', key: 'demos', headline: `${down.length} down`, detail: down.join(', '), status: 'Down', tone: 'bad', action }
   const slow = feed.services.filter((service) => service.state === 'degraded').length
-  if (slow > 0) return { ...base, headline: `${slow} slow`, detail: `${total - slow} of ${total} fully online`, tone: 'warn' }
-  return { ...base, headline: `${total} / ${total} online`, detail: 'OpenPing', tone: 'good' }
+  if (slow > 0) return { area: 'demos', key: 'demos', headline: `${slow} slow`, detail: `${total - slow} of ${total} fully online`, status: 'Slow', tone: 'warn', action }
+  return { area: 'demos', key: 'demos', headline: `${total} / ${total} online`, detail: feed.services.map((service) => service.name).join(', '), status: 'Online', tone: 'good', action }
 }
 
 async function errors(): Promise<Summary> {
-  const base = { href: '/errors', label: 'Errors' }
-  if (!sentryConfig()) return notConnected(base.href, base.label, 'Needs a Sentry read token')
+  if (!sentryConfig()) return notConnected('errors', 'Needs a Sentry read-only token')
   const summary = await getSentrySummary()
-  const tone: Tone = summary.newThisWeek > 0 ? 'warn' : 'good'
-  return { ...base, headline: `${summary.unresolved.length} unresolved`, detail: `${summary.newThisWeek} new this week`, tone }
+  return {
+    area: 'errors',
+    key: 'errors',
+    headline: `${summary.unresolved.length} unresolved`,
+    detail: `${summary.newThisWeek} new this week`,
+    status: summary.newThisWeek > 0 ? 'New issues' : 'Calm',
+    tone: summary.newThisWeek > 0 ? 'warn' : 'good',
+    action: { label: 'View on Sentry', href: `https://${summary.org}.sentry.io/issues/` },
+  }
 }
 
 async function traffic(): Promise<Summary> {
-  const base = { href: '/traffic', label: 'Website traffic' }
-  if (!ga4Config()) return notConnected(base.href, base.label, 'Needs Google Analytics access')
+  if (!ga4Config()) return notConnected('traffic', 'Needs Google Analytics access')
   const data = await getTraffic()
-  return { ...base, headline: formatNumber(data.visitors), detail: 'visitors in 28 days', tone: 'quiet' }
+  return { area: 'traffic', key: 'traffic', headline: formatNumber(data.visitors), detail: 'visitors in the last 28 days', status: '28 days', tone: 'quiet', action: { label: 'Open Google Analytics', href: 'https://analytics.google.com/analytics/web/' } }
 }
 
 async function referrals(): Promise<Summary> {
-  const base = { href: '/referrals', label: 'Referrals to Appturnity' }
-  if (!isStoreConnected()) return notConnected(base.href, base.label, 'Needs the analytics database')
+  if (!isStoreConnected()) return notConnected('referrals', 'Needs the analytics database and a counter on n8builds.dev')
   const days = await readDailyHashTotals('ref:appturnity', 30)
   const total = days.reduce((sum, day) => sum + day.total, 0)
   return total === 0
-    ? { ...base, headline: 'No clicks yet', detail: 'Counter not added to n8builds-web yet', tone: 'off' }
-    : { ...base, headline: formatNumber(total), detail: 'clicks in 30 days', tone: 'quiet' }
+    ? { area: 'referrals', key: 'referrals', headline: 'No clicks yet', detail: 'The counter isn\'t on n8builds.dev yet', status: 'Waiting', tone: 'off' }
+    : { area: 'referrals', key: 'referrals', headline: formatNumber(total), detail: 'clicks to appturnity.com in 30 days', status: '30 days', tone: 'quiet' }
 }
 
 async function contact(): Promise<Summary> {
-  const base = { href: '/contact', label: 'Contact messages' }
-  if (!isStoreConnected()) return notConnected(base.href, base.label, 'Needs the analytics database')
+  if (!isStoreConnected()) return notConnected('contact', 'Needs the analytics database and a counter on n8builds.dev')
   const days = await readDailyCounts('contact:sent', 30)
   const week = days.slice(-7).reduce((sum, day) => sum + day.count, 0)
-  return { ...base, headline: formatNumber(week), detail: 'messages in 7 days', tone: 'quiet' }
+  return { area: 'contact', key: 'contact', headline: formatNumber(week), detail: 'messages in the last 7 days', status: '7 days', tone: 'quiet' }
 }
 
 async function releases(): Promise<Summary> {
-  const base = { href: '/releases', label: 'Releases and deploys' }
-  if (!isGitHubConnected()) return noGitHub(base.href, base.label)
-  const [deploys, latest] = await Promise.all([
-    getLatestDeployments(5),
-    Promise.all(TRACKED_REPOS.map(async ({ repo }) => ({ repo, release: await getLatestRelease(repo) }))),
-  ])
-  const failed = deploys.ok ? deploys.data.filter((deploy) => deploy.state === 'failure' || deploy.state === 'error') : []
-  const newest = latest
-    .flatMap(({ repo, release }) => (release.ok && release.data ? [{ repo, ...release.data }] : []))
-    .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))[0]
-  if (failed.length > 0) return { ...base, headline: `${failed.length} failed deploy${failed.length > 1 ? 's' : ''}`, detail: failed.map((deploy) => shortName(deploy.repo)).join(', '), tone: 'bad' }
-  return { ...base, headline: newest ? newest.tag : 'No releases', detail: newest ? `${shortName(newest.repo)}, latest release` : '', tone: 'quiet' }
+  if (!isGitHubConnected()) return notConnected('releases', 'Needs a GitHub token')
+  const deploys = await getLatestDeployments(5)
+  if (!deploys.ok) return { area: 'releases', key: 'releases', headline: 'Unavailable', detail: deploys.message, status: 'Error', tone: 'warn' }
+  const failed = deploys.data.filter((deploy) => deploy.state === 'failure' || deploy.state === 'error')
+  if (failed.length > 0) {
+    return { area: 'releases', key: 'releases', headline: `${failed.length} failed`, detail: `Deploys of ${[...new Set(failed.map((deploy) => shortName(deploy.repo)))].join(', ')}`, status: 'Failed deploy', tone: 'bad' }
+  }
+  const newest = deploys.data[0]
+  return {
+    area: 'releases',
+    key: 'releases',
+    headline: 'Deploys OK',
+    detail: newest
+      ? `Latest: ${shortName(newest.repo)} (${newest.environment}), ${new Date(newest.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/Los_Angeles' })} PT`
+      : 'No deploys yet',
+    status: 'Healthy',
+    tone: 'good',
+  }
 }
 
 async function security(): Promise<Summary> {
-  const base = { href: '/security', label: 'Security alerts' }
-  if (!isGitHubConnected()) return noGitHub(base.href, base.label)
+  if (!isGitHubConnected()) return notConnected('security', 'Needs a GitHub token')
   const results = await Promise.all(TRACKED_REPOS.map(({ repo }) => getDependabotAlerts(repo)))
   const open = results.reduce((sum, result) => sum + (result.ok && typeof result.data === 'number' ? result.data : 0), 0)
   const off = results.filter((result) => result.ok && result.data === 'disabled').length
-  if (open > 0) return { ...base, headline: `${open} open`, detail: 'Dependabot alerts', tone: 'bad' }
-  if (off > 0) return { ...base, headline: 'Alerts off', detail: `On ${off} of ${TRACKED_REPOS.length} repos; 0 open elsewhere`, tone: 'warn' }
-  return { ...base, headline: '0 open', detail: 'Dependabot alerts', tone: 'good' }
+  if (open > 0) return { area: 'security', key: 'security', headline: `${open} open`, detail: 'Dependabot alerts to review', status: 'Vulnerable', tone: 'bad' }
+  if (off > 0) return { area: 'security', key: 'security', headline: `Off on ${off} of ${TRACKED_REPOS.length}`, detail: 'Repos with Dependabot alerts turned off report nothing', status: 'Alerts off', tone: 'warn' }
+  return { area: 'security', key: 'security', headline: '0 open', detail: 'Dependabot alerts', status: 'Covered', tone: 'good' }
 }
 
-/** Every area, in the sidebar's order. A failing source shows as a warning, never breaks the page. */
+/**
+ * Each headline is cached on its own (five minutes, then refreshed in the
+ * background), so one slow or failing source never holds back or poisons the
+ * others. A source slower than SOURCE_TIMEOUT_MS on a cold cache shows as
+ * "Still loading" this time; its request keeps running and fills the cache.
+ */
+function cachedSource(key: string, load: () => Promise<Summary>) {
+  return unstable_cache(load, ['overview', key], { revalidate: REVALIDATE_SECONDS })
+}
+
+function withTimeout(area: AreaId, key: string, load: () => Promise<Summary>): Promise<Summary> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<Summary>((resolve) => {
+    timer = setTimeout(() => resolve({ area, key, headline: 'Still loading', detail: 'This source is slow right now; open the page for details', status: 'Slow source', tone: 'warn' }), SOURCE_TIMEOUT_MS)
+  })
+  const loaded = load()
+    .catch((error: unknown): Summary => ({ area, key, headline: 'Unavailable', detail: error instanceof Error ? error.message : 'Unknown error', status: 'Error', tone: 'warn' }))
+    .finally(() => clearTimeout(timer))
+  return Promise.race([loaded, timeout])
+}
+
+const SOURCES: [AreaId, string, () => Promise<Summary>][] = [
+  ['ci', 'ci', cachedSource('ci', ci)],
+  ['minutes', 'minutes', cachedSource('minutes', minutes)],
+  ['repos', 'stars', cachedSource('stars', stars)],
+  ['repos', 'views', cachedSource('views', views)],
+  ['releases', 'releases', cachedSource('releases', releases)],
+  ['security', 'security', cachedSource('security', security)],
+  ['demos', 'demos', cachedSource('demos', demos)],
+  ['errors', 'errors', cachedSource('errors', errors)],
+  ['traffic', 'traffic', cachedSource('traffic', traffic)],
+  ['referrals', 'referrals', cachedSource('referrals', referrals)],
+  ['contact', 'contact', cachedSource('contact', contact)],
+]
+
+/** Every headline, in the sidebar's order. */
 export async function getSummaries(): Promise<Summary[]> {
-  const sources: [string, string, () => Promise<Summary>][] = [
-    ['/ci', 'CI', ci],
-    ['/minutes', 'Actions minutes', minutes],
-    ['/repos', 'Stars', stars],
-    ['/repos', 'Repo views 14d', views],
-    ['/demos', 'Live demos', demos],
-    ['/errors', 'Errors', errors],
-    ['/traffic', 'Website traffic', traffic],
-    ['/referrals', 'Referrals to Appturnity', referrals],
-    ['/contact', 'Contact messages', contact],
-    ['/releases', 'Releases and deploys', releases],
-    ['/security', 'Security alerts', security],
-  ]
-  return Promise.all(
-    sources.map(([href, label, load]) =>
-      load().catch((error: unknown): Summary => ({ href, label, headline: 'Unavailable', detail: error instanceof Error ? error.message : 'Unknown error', tone: 'warn' })),
-    ),
-  )
+  return Promise.all(SOURCES.map(([area, key, load]) => withTimeout(area, key, load)))
 }
