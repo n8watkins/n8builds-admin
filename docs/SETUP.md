@@ -77,7 +77,7 @@ Sets: `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECTS`, `SENTRY_API_BASE` (o
 
 ## 5. Counters and trends: a second Upstash database
 
-Stores the daily snapshot (stars and minutes trends) and the Appturnity referral and contact message counts.
+Stores the daily snapshot (stars and minutes trends), the Appturnity referral and contact message counts, and the dino game stats. Set the two database variables on the n8builds-web project as well: it writes the counts.
 
 1. Keep it separate from the contact form's database, so counters can never use up the form's quota and switch it off.
 2. In Upstash, Create Database: name `n8builds-analytics`, type Redis, plan Free, region close to Vercel's (US East).
