@@ -112,6 +112,15 @@ async function referrals(): Promise<Summary> {
     : { area: 'referrals', key: 'referrals', headline: formatNumber(total), detail: 'clicks to appturnity.com in 30 days', status: '30 days', tone: 'quiet' }
 }
 
+async function game(): Promise<Summary> {
+  if (!isStoreConnected()) return notConnected('game', 'Needs the analytics database, also set on n8builds-web')
+  const days = await readDailyHashTotals('game:rounds', 30)
+  const started = days.reduce((sum, day) => sum + Object.entries(day.byField).filter(([field]) => field.startsWith('start:')).reduce((s, [, v]) => s + v, 0), 0)
+  return started === 0
+    ? { area: 'game', key: 'game', headline: 'No rounds yet', detail: 'Nobody has played the dino game yet', status: 'Waiting', tone: 'off' }
+    : { area: 'game', key: 'game', headline: formatNumber(started), detail: 'dino game rounds in 30 days', status: '30 days', tone: 'quiet' }
+}
+
 async function contact(): Promise<Summary> {
   if (!isStoreConnected()) return notConnected('contact', 'Needs the analytics database and a counter on n8builds.dev')
   const days = await readDailyCounts('contact:sent', 30)
@@ -181,6 +190,7 @@ const SOURCES: [AreaId, string, () => Promise<Summary>][] = [
   ['traffic', 'traffic', cachedSource('traffic', traffic)],
   ['referrals', 'referrals', cachedSource('referrals', referrals)],
   ['contact', 'contact', cachedSource('contact', contact)],
+  ['game', 'game', cachedSource('game', game)],
 ]
 
 /** Every headline, in the sidebar's order. */

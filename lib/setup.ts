@@ -156,11 +156,12 @@ export const SETUP_ITEMS: SetupItem[] = [
   {
     id: 'upstash',
     title: 'Counters and trends: a second Upstash database',
-    why: 'Stores the daily snapshot (stars and minutes trends) and the Appturnity referral and contact message counts.',
+    why: 'Stores the daily snapshot (stars and minutes trends), the Appturnity referral and contact message counts, and the dino game stats. Set the two database variables on the n8builds-web project as well: it writes the counts.',
     powers: [
       { label: 'Stars trend', href: '/repos' },
       { label: 'Referrals', href: '/referrals' },
       { label: 'Contact messages', href: '/contact' },
+      { label: 'Dino game', href: '/game' },
     ],
     check: 'env',
     vars: [

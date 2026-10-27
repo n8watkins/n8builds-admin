@@ -3,6 +3,7 @@ import {
   LuActivity,
   LuBug,
   LuChartLine,
+  LuGamepad2,
   LuLayoutDashboard,
   LuListChecks,
   LuMail,
@@ -46,6 +47,7 @@ export type AreaId =
   | 'errors'
   | 'traffic'
   | 'referrals'
+  | 'game'
   | 'contact'
   | 'setup'
 
@@ -188,6 +190,19 @@ export const AREAS: Record<AreaId, Area> = {
       'Only daily totals are stored: no IPs, no IDs, no cookies.',
     ],
   },
+  game: {
+    id: 'game',
+    href: '/game',
+    label: 'Dino game',
+    icon: LuGamepad2,
+    accent: accent.lime,
+    summary: 'Who plays the dino catch game on n8builds.dev and the portfolio, and the high scores.',
+    about: [
+      'The dino in the AI kit (n8builds.dev) and the tech stack card (the portfolio) is a 30-second catch game.',
+      'This counts rounds, players, tries, scores and countries, and keeps the high scores with site, country and date.',
+      'Private by design: no cookies or IPs; a player is a hash that changes every day.',
+    ],
+  },
   contact: {
     id: 'contact',
     href: '/contact',
@@ -216,7 +231,7 @@ export const NAV_GROUPS: { title?: string; areas: AreaId[] }[] = [
   { areas: ['overview'] },
   { title: 'GitHub', areas: ['ci', 'minutes', 'repos', 'releases', 'security'] },
   { title: 'Sites', areas: ['demos', 'errors', 'traffic'] },
-  { title: 'Counters', areas: ['referrals', 'contact'] },
+  { title: 'Counters', areas: ['referrals', 'contact', 'game'] },
   { areas: ['setup'] },
 ]
 
