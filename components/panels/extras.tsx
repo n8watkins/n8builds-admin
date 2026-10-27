@@ -63,7 +63,7 @@ export async function LatestDeploys() {
   const result = await getLatestDeployments(7)
   if (!result.ok) return <PanelError message={result.message} />
   return (
-    <ul className="-mx-2 divide-y divide-white/[0.05]">
+    <ul className="-mx-2 divide-y divide-white/[0.04]">
       {result.data.map((deploy) => (
         <li key={`${deploy.repo}-${deploy.sha}-${deploy.createdAt}`} className="flex items-center gap-2.5 px-2 py-2 text-[13px]">
           <Dot tone={stateTone(deploy.state ?? '')} label={deploy.state ?? 'unknown'} />
@@ -99,12 +99,12 @@ export async function LatestReleases() {
   const none = rows.filter(({ release }) => release.ok && !release.data).map(({ repo }) => shortName(repo))
   return (
     <div className="flex flex-1 flex-col">
-      <ul className="-mx-2 divide-y divide-white/[0.05]">
+      <ul className="-mx-2 divide-y divide-white/[0.04]">
         {released.map((release) => (
           <li key={release.repo} className="flex items-center justify-between gap-3 px-2 py-2 text-[13px]">
             <span className="min-w-0 truncate text-slate-100">{shortName(release.repo)}</span>
             <span className="flex shrink-0 items-center gap-2">
-              <a href={release.url} target="_blank" rel="noreferrer" className="rounded border border-cyan-400/20 px-1.5 font-mono text-xs text-cyan-200 hover:border-cyan-400/50">
+              <a href={release.url} target="_blank" rel="noreferrer" className="rounded bg-cyan-400/10 px-1.5 font-mono text-xs text-cyan-200 hover:bg-cyan-400/20">
                 {release.tag}
               </a>
               <span className="w-20 text-right text-xs text-slate-450">{timeAgo(release.publishedAt)}</span>

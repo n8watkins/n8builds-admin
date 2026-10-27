@@ -20,7 +20,7 @@ export async function SentryPanel() {
         willShow={['Unresolved issues', 'New this week', 'Events per issue', 'Errors in 30 days vs the free 5k']}
         needs={['SENTRY_AUTH_TOKEN', 'SENTRY_ORG', 'SENTRY_PROJECTS']}
         plan={['Create a personal token with only org:read, project:read and event:read.', 'Set the org slug and the project slugs (comma-separated) next to it.']}
-        setupStep="step 4"
+        setupId="sentry"
       />
     )
   }
@@ -37,7 +37,7 @@ export async function SentryPanel() {
         <Stat label="New 7d" value={formatNumber(summary.newThisWeek)} />
         <Stat label="Errors 30d" value={summary.errors30d === null ? 'n/a' : formatNumber(summary.errors30d)} hint="free plan: 5k / month" />
       </div>
-      <ul className="-mx-2 divide-y divide-white/[0.05]">
+      <ul className="-mx-2 divide-y divide-white/[0.04]">
         {summary.unresolved.slice(0, 6).map((issue) => (
           <li key={issue.id} className="px-2 py-2 text-[13px]">
             <a href={issue.url} target="_blank" rel="noreferrer" className="block truncate text-slate-100 hover:text-cyan-300">
@@ -68,7 +68,7 @@ export async function TrafficPanel() {
           'Add its email as a Viewer on the GA4 property (Admin, Property access management).',
           'Set the numeric property ID (not the G- measurement ID) and the key\'s two fields in Vercel.',
         ]}
-        setupStep="step 3"
+        setupId="ga4"
       />
     )
   }
@@ -121,7 +121,7 @@ export async function ReferralsPanel() {
         willShow={['Clicks today, 7 and 30 days', 'By placement', '30-day trend']}
         needs={STORE_VARS}
         plan={plan}
-        setupStep="step 5"
+        setupId="upstash"
       />
     )
   }
@@ -165,7 +165,7 @@ export async function ContactPanel() {
         willShow={['Messages this week and month', 'Against the 50 / day cap']}
         needs={STORE_VARS}
         plan={plan}
-        setupStep="step 5"
+        setupId="upstash"
       />
     )
   }
@@ -204,7 +204,7 @@ export async function TrendsPanel() {
         willShow={['Stars, 30-day trend', 'Minutes used, by day', 'Week-over-week change']}
         needs={[...STORE_VARS, 'CRON_SECRET']}
         plan={plan}
-        setupStep="step 5"
+        setupId="upstash"
       />
     )
   }
@@ -245,7 +245,7 @@ export function AiCrawlersCard() {
         href="https://vercel.com/natkins23s-projects/n8builds-web/firewall"
         target="_blank"
         rel="noreferrer"
-        className="mt-auto inline-flex w-fit items-center gap-1.5 rounded-lg border border-cyan-400/30 bg-cyan-400/[0.06] px-3 py-1.5 text-[13px] font-medium text-cyan-200 transition-colors hover:border-cyan-400/60 hover:bg-cyan-400/10">
+        className="mt-auto inline-flex w-fit items-center gap-1.5 rounded-lg bg-cyan-400/10 px-3 py-1.5 text-[13px] font-medium text-cyan-200 transition-colors hover:bg-cyan-400/20">
         Open the Vercel Firewall
         <ExternalIcon />
       </a>

@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { AlertIcon, ExternalIcon, KeyIcon, PlugIcon } from './icons'
 
@@ -5,64 +6,56 @@ export function cx(...parts: (string | false | null | undefined)[]): string {
   return parts.filter(Boolean).join(' ')
 }
 
-/** A dashboard card. The header renders at once; the body streams in its own Suspense boundary. */
+/** A card: the same quiet surface everywhere, no border. */
+export function Card({ className, children }: { className?: string; children: ReactNode }) {
+  return <div className={cx('rounded-2xl bg-white/[0.025] p-5 sm:p-6', className)}>{children}</div>
+}
+
+/** A titled card on a detail page. Its body streams in its own Suspense boundary. */
 export function Panel({
   id,
-  index,
   title,
   source,
-  extra,
   className,
   children,
 }: {
   id: string
-  /** "01": the owner's panel order. */
-  index?: string
   title: string
   source?: { label: string; href: string }
-  /** Marks a card beyond the agreed MVP. */
-  extra?: boolean
   className?: string
   children: ReactNode
 }) {
   return (
-    <section
-      id={id}
-      aria-labelledby={`${id}-title`}
-      className={cx('flex min-w-0 flex-col rounded-2xl border bg-panel/80 p-5 shadow-[0_1px_0_rgb(255_255_255/0.03)_inset]', className)}>
-      <header className="mb-4 flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2.5">
-          {index && <span className="font-mono text-[11px] font-semibold text-cyan-400/80">{index}</span>}
-          <h2 id={`${id}-title`} className="truncate text-[15px] font-semibold text-slate-100">
-            {title}
-          </h2>
-          {extra && (
-            <span className="rounded-full border border-cyan-400/25 bg-cyan-400/5 px-2 py-0.5 font-mono text-[10px] font-semibold tracking-wide text-cyan-300 uppercase">
-              Extra
-            </span>
-          )}
-        </div>
-        {source && (
-          <a
-            href={source.href}
-            target="_blank"
-            rel="noreferrer"
-            className="flex shrink-0 items-center gap-1 text-xs text-slate-450 transition-colors hover:text-cyan-300">
-            {source.label}
-            <ExternalIcon className="size-3" />
-          </a>
-        )}
+    <section id={id} aria-labelledby={`${id}-title`} className={cx('flex min-w-0 flex-col rounded-2xl bg-white/[0.025] p-5 sm:p-6', className)}>
+      <header className="mb-5 flex items-baseline justify-between gap-3">
+        <h2 id={`${id}-title`} className="text-[15px] font-semibold text-slate-100">
+          {title}
+        </h2>
+        {source && <SourceLink {...source} />}
       </header>
       <div className="flex min-h-0 flex-1 flex-col">{children}</div>
     </section>
   )
 }
 
-export function SectionHeading({ title, note }: { title: string; note?: string }) {
+export function SourceLink({ label, href }: { label: string; href: string }) {
   return (
-    <div className="col-span-full mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1 first:mt-0">
-      <h2 className="text-xs font-semibold tracking-[0.14em] text-slate-450 uppercase">{title}</h2>
-      {note && <p className="text-xs text-slate-475">{note}</p>}
+    <a href={href} target="_blank" rel="noreferrer" className="flex shrink-0 items-center gap-1 text-xs text-slate-450 transition-colors hover:text-cyan-300">
+      {label}
+      <ExternalIcon className="size-3" />
+    </a>
+  )
+}
+
+/** A detail page's heading. */
+export function PageHeader({ title, description, source }: { title: string; description?: ReactNode; source?: { label: string; href: string } }) {
+  return (
+    <div className="mb-10 flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+      <div className="max-w-2xl">
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-50">{title}</h1>
+        {description && <p className="mt-2 text-[14px] leading-relaxed text-slate-400">{description}</p>}
+      </div>
+      {source && <SourceLink {...source} />}
     </div>
   )
 }
@@ -119,8 +112,9 @@ export function BarList({ rows, format = String }: { rows: { label: string; valu
 }
 
 /**
- * The card a panel shows until its account resource exists: what it needs
- * (env var names only, never values), what it will show, and the plan.
+ * What a page shows until its account resource exists: what it needs
+ * (env var names only, never values), what it will show, the plan, and a
+ * link to the matching Setup item.
  */
 export function NotConnected({
   kind = 'not-connected',
@@ -129,7 +123,7 @@ export function NotConnected({
   needs,
   willShow,
   plan,
-  setupStep,
+  setupId,
 }: {
   kind?: 'not-connected' | 'needs-permission'
   title?: string
@@ -137,20 +131,22 @@ export function NotConnected({
   needs?: string[]
   willShow?: string[]
   plan?: ReactNode[]
-  /** The matching section of docs/SETUP.md. */
-  setupStep?: string
+  /** The Setup item that connects it. */
+  setupId?: string
 }) {
   const permission = kind === 'needs-permission'
   return (
-    <div className={cx('flex flex-1 flex-col gap-3 rounded-xl border border-dashed p-4', permission ? 'border-amber-300/25 bg-amber-300/[0.03]' : 'border-white/10 bg-white/[0.015]')}>
-      <p className={cx('flex items-center gap-2 text-sm font-semibold', permission ? 'text-amber-200' : 'text-slate-200')}>
-        {permission ? <KeyIcon /> : <PlugIcon className="size-4 text-cyan-400" />}
-        {title ?? (permission ? 'Needs a token permission' : 'Not connected yet')}
-      </p>
-      <p className="text-[13px] leading-relaxed text-slate-400">{why}</p>
+    <div className="flex flex-1 flex-col gap-5">
+      <div>
+        <p className={cx('flex items-center gap-2 text-sm font-semibold', permission ? 'text-amber-200' : 'text-slate-200')}>
+          {permission ? <KeyIcon /> : <PlugIcon className="size-4 text-slate-450" />}
+          {title ?? (permission ? 'Needs a token permission' : 'Not connected yet')}
+        </p>
+        <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-slate-400">{why}</p>
+      </div>
       {willShow && willShow.length > 0 && (
         <div>
-          <p className="mb-1.5 text-[11px] font-medium tracking-wide text-slate-475 uppercase">Will show</p>
+          <p className="mb-2 text-[11px] font-medium tracking-wide text-slate-475 uppercase">Will show</p>
           <ul className="flex flex-wrap gap-1.5">
             {willShow.map((item) => (
               <li key={item} className="rounded-md bg-white/[0.04] px-2 py-0.5 text-xs text-slate-300">
@@ -162,22 +158,26 @@ export function NotConnected({
       )}
       {plan && plan.length > 0 && (
         <div>
-          <p className="mb-1.5 text-[11px] font-medium tracking-wide text-slate-475 uppercase">Plan</p>
-          <ol className="list-decimal space-y-1 pl-4 text-[13px] leading-relaxed text-slate-400 marker:text-slate-500">
+          <p className="mb-2 text-[11px] font-medium tracking-wide text-slate-475 uppercase">Plan</p>
+          <ol className="max-w-2xl list-decimal space-y-1.5 pl-4 text-[14px] leading-relaxed text-slate-400 marker:text-slate-500">
             {plan.map((step, index) => (
               <li key={index}>{step}</li>
             ))}
           </ol>
         </div>
       )}
-      {(needs?.length || setupStep) && (
-        <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-1">
+      {(needs?.length || setupId) && (
+        <div className="mt-auto flex flex-wrap items-center gap-2">
           {needs?.map((name) => (
-            <code key={name} className="rounded border border-white/10 bg-darkBlue px-1.5 py-0.5 font-mono text-[11px] text-cyan-200/90">
+            <code key={name} className="rounded bg-darkBlue px-1.5 py-0.5 font-mono text-[11px] text-cyan-200/90">
               {name}
             </code>
           ))}
-          {setupStep && <span className="ml-auto text-[11px] text-slate-475">docs/SETUP.md, {setupStep}</span>}
+          {setupId && (
+            <Link href={`/setup#${setupId}`} className="ml-auto text-[13px] font-medium text-cyan-300 hover:text-cyan-200">
+              How to connect it →
+            </Link>
+          )}
         </div>
       )}
     </div>
@@ -186,7 +186,7 @@ export function NotConnected({
 
 export function PanelError({ message }: { message: string }) {
   return (
-    <div role="alert" className="flex items-start gap-2 rounded-xl border border-rose-400/20 bg-rose-400/[0.04] p-4 text-[13px] text-rose-200">
+    <div role="alert" className="flex items-start gap-2 rounded-xl bg-rose-400/[0.05] p-4 text-[13px] text-rose-200">
       <AlertIcon className="mt-0.5 size-4 text-rose-300" />
       <p>
         <span className="font-semibold">Couldn&apos;t load this panel.</span> <span className="text-rose-200/80">{message}</span>

@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Private owner dashboard for n8builds.dev (admin.n8builds.dev).",
   "private": true,
+  "type": "module",
   "license": "UNLICENSED",
   "author": "Nathan Watkins",
   "engines": {
@@ -15,7 +16,8 @@
     "start": "next start -p 3831",
     "lint": "eslint . --max-warnings 0",
     "type-check": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "setup:docs": "node scripts/gen-setup-docs.mjs"
   },
   "dependencies": {
     "@upstash/redis": "^1.40.0",

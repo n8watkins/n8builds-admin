@@ -17,7 +17,7 @@ export function GitHubNotConnected() {
     <NotConnected
       why="Start the server with a GitHub token in the environment (locally: GITHUB_TOKEN=$(gh auth token))."
       needs={['GITHUB_TOKEN']}
-      setupStep="step 2"
+      setupId="github"
     />
   )
 }
@@ -42,7 +42,7 @@ export async function CiStatus() {
     return <PanelError message={first && !first.ok ? first.message : 'No repo answered'} />
   }
   return (
-    <ul className="-mx-2 divide-y divide-white/[0.05]">
+    <ul className="-mx-2 divide-y divide-white/[0.04]">
       {results.map(({ tracked, ci }) => {
         if (!ci.ok) {
           return (
@@ -75,8 +75,8 @@ export async function CiStatus() {
                         rel="noreferrer"
                         title={`${run.workflow} on ${run.branch}: ${runLabel(run)}, ${timeAgo(run.createdAt)}`}
                         className={cx(
-                          'flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs transition-colors hover:border-cyan-400/40',
-                          runTone(run) === 'bad' ? 'border-rose-400/25 text-rose-100' : 'border-white/[0.08] text-slate-300',
+                          'flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs transition-colors hover:bg-white/[0.08]',
+                          runTone(run) === 'bad' ? 'bg-rose-400/10 text-rose-100' : 'bg-white/[0.04] text-slate-300',
                         )}>
                         <Dot tone={runTone(run)} />
                         <span className="max-w-40 truncate">{run.workflow}</span>
@@ -121,7 +121,7 @@ export async function ActionsMinutes() {
           <>
             <Meter value={org.data.total} max={FREE_ACTIONS_MINUTES} label={`${APPTURNITY_ORG} Actions minutes used in ${month}`} />
             {org.data.total >= FREE_ACTIONS_MINUTES && org.data.netAmount === 0 ? (
-              <p role="status" className="mt-2 rounded-lg border border-rose-400/25 bg-rose-400/[0.05] px-3 py-2 text-xs leading-relaxed text-rose-200">
+              <p role="status" className="mt-3 rounded-lg bg-rose-400/[0.07] px-3 py-2.5 text-xs leading-relaxed text-rose-200">
                 <b className="font-semibold">All 2,000 free minutes are used</b>
                 {org.data.lastDay ? ` (no usage since ${org.data.lastDay})` : ''}, with $0 billed: private-repo workflows can&apos;t run until the minutes reset on the 1st, unless a budget allows paid minutes.
               </p>
@@ -159,7 +159,7 @@ export async function ActionsMinutes() {
               </>
             }
             needs={['GITHUB_TOKEN (Plan: read)']}
-            setupStep="step 2"
+            setupId="github"
           />
         )}
       </div>
@@ -210,7 +210,7 @@ export async function RepoStats() {
             <th scope="col" className="px-1 pb-2 text-right font-medium">Clones 14d</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-white/[0.05] font-mono text-xs text-slate-200 tabular-nums">
+        <tbody className="divide-y divide-white/[0.04] font-mono text-xs text-slate-200 tabular-nums">
           {rows.map(({ tracked, repo, views, clones }) => (
             <tr key={tracked.repo}>
               <th scope="row" className="px-1 py-2 text-left align-top font-sans font-normal">
@@ -226,7 +226,7 @@ export async function RepoStats() {
           ))}
         </tbody>
         <tfoot className="font-mono text-xs text-slate-50 tabular-nums">
-          <tr className="border-t border-white/10">
+          <tr className="border-t border-white/[0.08]">
             <th scope="row" className="px-1 pt-2.5 text-left align-top font-sans text-[11px] font-medium tracking-wide text-slate-450 uppercase">
               All repos
             </th>
