@@ -32,12 +32,12 @@ export default async function SetupPage() {
         }
       />
 
-      <div className={cx(CARD, 'mb-10 max-w-4xl p-6 sm:p-7')}>
+      <div className={cx(CARD, 'mb-10 p-6 sm:p-7')}>
         <p className="text-[17px] font-semibold text-slate-50">
           {done} of {checkable.length} done
           {manual > 0 && <span className="font-normal text-slate-400">, plus {manual} to confirm in Vercel</span>}
         </p>
-        <ol className="mt-5 grid gap-2 sm:grid-cols-2">
+        <ol className="mt-5 grid gap-x-6 gap-y-1 lg:grid-cols-2">
           {items.map(({ item, status }, index) => (
             <li key={item.id}>
               <a href={`#${item.id}`} className="flex items-center gap-3 rounded-lg px-3 py-2 text-[15px] text-slate-200 hover:bg-white/[0.05]">
@@ -52,7 +52,7 @@ export default async function SetupPage() {
         </ol>
       </div>
 
-      <ol className="max-w-4xl space-y-6">
+      <ol className="space-y-6">
         {items.map(({ item, status }, index) => (
           <li key={item.id} id={item.id} className={cx(CARD, 'scroll-mt-24 p-6 sm:p-8')}>
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -62,9 +62,9 @@ export default async function SetupPage() {
               </h2>
               <StatusPill tone={PILL[status.state]}>{status.label}</StatusPill>
             </div>
-            <p className="mt-3 text-[16px] leading-relaxed text-slate-300">{item.why}</p>
+            <p className="mt-3 max-w-3xl text-[16px] leading-relaxed text-slate-300">{item.why}</p>
             {status.note && (
-              <p className="mt-3 rounded-lg bg-amber-300/[0.07] px-4 py-3 text-[15px] text-amber-100">
+              <p className="mt-3 max-w-3xl rounded-lg bg-amber-300/[0.07] px-4 py-3 text-[15px] text-amber-100">
                 <Inline text={status.note} />
               </p>
             )}
@@ -72,7 +72,7 @@ export default async function SetupPage() {
             {item.vars.length > 0 && (
               <div className="mt-6">
                 <p className="mb-3 text-[15px] font-medium text-slate-200">Environment variables</p>
-                <ul className="grid gap-2 sm:grid-cols-2">
+                <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                   {item.vars.map((v) => {
                     const set = isSet(v.name)
                     return (
@@ -96,7 +96,7 @@ export default async function SetupPage() {
                 <span className="group-open:hidden">Show the steps</span>
                 <span className="hidden text-slate-200 group-open:inline">Steps</span>
               </summary>
-              <ol className="mt-3 list-decimal space-y-2.5 pl-6 text-[15px] leading-relaxed text-slate-300 marker:text-slate-500">
+              <ol className="mt-3 max-w-3xl list-decimal space-y-2.5 pl-6 text-[15px] leading-relaxed text-slate-300 marker:text-slate-400">
                 {item.steps.map((step) => (
                   <li key={step} className="pl-1">
                     <Inline text={step} />

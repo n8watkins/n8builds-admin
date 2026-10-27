@@ -12,6 +12,10 @@ describe('releaseSummary', () => {
     expect(releaseSummary('')).toBeNull()
   })
 
+  it('drops the "by @user in <PR URL>" tail of generated notes', () => {
+    expect(releaseSummary('* docs: a design proposal by @n8watkins in https://github.com/n8watkins/scribe/pull/1')).toBe('docs: a design proposal')
+  })
+
   it('shortens long lines', () => {
     const line = releaseSummary('x'.repeat(200))
     expect(line).toHaveLength(140)

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import type { IconType } from 'react-icons'
-import { LuArrowRight, LuCircleAlert, LuCircleCheck, LuCircleDashed, LuExternalLink, LuInfo, LuKeyRound, LuPlug, LuTriangleAlert } from 'react-icons/lu'
+import { LuArrowRight, LuChevronDown, LuGithub, LuCircleAlert, LuCircleCheck, LuCircleDashed, LuExternalLink, LuInfo, LuKeyRound, LuPlug, LuTriangleAlert } from 'react-icons/lu'
 import type { Area } from '@/lib/areas'
 
 /*
@@ -48,7 +48,9 @@ const ACTION = {
 }
 
 /** Goes somewhere outside the admin, in a new tab. */
-export function ExternalAction({ href, children, describe, variant = 'secondary', icon: Icon }: ActionProps) {
+export function ExternalAction({ href, children, describe, variant = 'secondary', icon }: ActionProps) {
+  // Every button to GitHub carries its mark, so the destination reads at a glance.
+  const Icon = icon ?? (href.startsWith('https://github.com/') ? LuGithub : undefined)
   return (
     <a
       href={href}
@@ -164,30 +166,44 @@ export function Panel({
 
 /** A page's heading: icon, title, one-line lead, the "What this is" facts and the main actions. */
 export function PageHeader({ area, lead, actions }: { area: Area; lead?: ReactNode; actions?: ReactNode }) {
+  const facts = area.about.map((fact) => (
+    <li key={fact} className="flex gap-3">
+      <span aria-hidden className={cx('mt-2.5 size-1.5 shrink-0 rounded-full', area.accent.bar)} />
+      <span>{fact}</span>
+    </li>
+  ))
   return (
     <header className="mb-10">
-      <div className="flex items-center gap-4">
-        <AreaIcon area={area} size="lg" />
-        <h1 className="text-[30px] leading-tight font-semibold tracking-tight text-slate-50">{area.label}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
+        <div className="flex min-w-0 items-center gap-4">
+          <AreaIcon area={area} size="lg" />
+          <h1 className="text-[26px] leading-tight font-semibold tracking-tight text-balance text-slate-50 sm:text-[30px]">{area.label}</h1>
+        </div>
+        {actions && <Actions className="max-sm:hidden">{actions}</Actions>}
       </div>
       <p className="mt-4 max-w-3xl text-[16px] leading-relaxed text-slate-300">{lead ?? area.summary}</p>
+      {actions && <Actions className="mt-5 sm:hidden">{actions}</Actions>}
       {area.about.length > 0 && (
-        <details className="group mt-5 max-w-3xl rounded-xl bg-white/[0.03] px-5 py-4 ring-1 ring-inset ring-white/[0.05]" open>
-          <summary className="flex cursor-pointer list-none items-center gap-2 text-[14px] font-semibold text-slate-200 [&::-webkit-details-marker]:hidden">
-            <LuInfo aria-hidden className={cx('size-4', area.accent.text)} />
-            What this is and why it matters
-          </summary>
-          <ul className="mt-3 space-y-2 text-[15px] leading-relaxed text-slate-300">
-            {area.about.map((fact) => (
-              <li key={fact} className="flex gap-3">
-                <span aria-hidden className={cx('mt-2.5 size-1.5 shrink-0 rounded-full', area.accent.bar)} />
-                {fact}
-              </li>
-            ))}
-          </ul>
-        </details>
+        <>
+          {/* Wide screens: the facts side by side, always visible. */}
+          <section aria-label="What this is and why it matters" className="mt-6 hidden rounded-2xl bg-white/[0.025] p-6 ring-1 ring-inset ring-white/[0.05] lg:block">
+            <p className="flex items-center gap-2 text-[14px] font-semibold text-slate-200">
+              <LuInfo aria-hidden className={cx('size-4', area.accent.text)} />
+              What this is and why it matters
+            </p>
+            <ul className="mt-4 grid grid-cols-3 gap-8 text-[15px] leading-relaxed text-slate-300">{facts}</ul>
+          </section>
+          {/* Phones: folded, so the data comes first. */}
+          <details className="group mt-5 rounded-xl bg-white/[0.025] px-5 py-4 ring-1 ring-inset ring-white/[0.05] lg:hidden">
+            <summary className="flex cursor-pointer list-none items-center gap-2 text-[15px] font-semibold text-slate-200 [&::-webkit-details-marker]:hidden">
+              <LuInfo aria-hidden className={cx('size-4', area.accent.text)} />
+              What this is and why it matters
+              <LuChevronDown aria-hidden className="ml-auto size-4 text-slate-400 transition-transform group-open:rotate-180" />
+            </summary>
+            <ul className="mt-4 space-y-3 text-[15px] leading-relaxed text-slate-300">{facts}</ul>
+          </details>
+        </>
       )}
-      {actions && <Actions className="mt-6">{actions}</Actions>}
     </header>
   )
 }
@@ -258,8 +274,9 @@ export function NotConnected({
 }) {
   const permission = kind === 'needs-permission'
   const Icon = permission ? LuKeyRound : LuPlug
-  return (
-    <div className={cx('flex flex-1 flex-col gap-6 rounded-xl p-5 sm:p-6', permission ? 'bg-amber-300/[0.06]' : 'bg-white/[0.03]')}>
+  const label = 'mb-2.5 text-[14px] font-medium text-slate-300'
+  const intro = (
+    <div className="flex flex-col gap-6">
       <div>
         <p className={cx('flex items-center gap-2.5 text-[16px] font-semibold', permission ? 'text-amber-200' : 'text-slate-100')}>
           <Icon aria-hidden className="size-5" />
@@ -269,7 +286,7 @@ export function NotConnected({
       </div>
       {willShow && willShow.length > 0 && (
         <div>
-          <p className="mb-2.5 text-[14px] font-medium text-slate-300">Once connected it shows</p>
+          <p className={label}>Once connected it shows</p>
           <ul className="flex flex-wrap gap-2">
             {willShow.map((item) => (
               <li key={item} className="rounded-lg bg-white/[0.06] px-3 py-1.5 text-[14px] text-slate-200">
@@ -279,10 +296,14 @@ export function NotConnected({
           </ul>
         </div>
       )}
+    </div>
+  )
+  const next = (
+    <div className="flex flex-col gap-6">
       {plan && plan.length > 0 && (
         <div>
-          <p className="mb-2.5 text-[14px] font-medium text-slate-300">The plan</p>
-          <ol className="max-w-2xl list-decimal space-y-2 pl-5 text-[15px] leading-relaxed text-slate-300 marker:text-slate-500">
+          <p className={label}>The plan</p>
+          <ol className="max-w-2xl list-decimal space-y-2 pl-5 text-[15px] leading-relaxed text-slate-300 marker:text-slate-400">
             {plan.map((step, index) => (
               <li key={index}>{step}</li>
             ))}
@@ -291,11 +312,11 @@ export function NotConnected({
       )}
       {needs && needs.length > 0 && (
         <div>
-          <p className="mb-2.5 text-[14px] font-medium text-slate-300">Needs</p>
+          <p className={label}>Needs</p>
           <ul className="flex flex-wrap gap-2">
             {needs.map((name) => (
               <li key={name}>
-                <code className="rounded-md bg-darkBlue px-2 py-1 font-mono text-[13px] text-cyan-200">{name}</code>
+                <code className="rounded-md bg-darkBlue px-2 py-1 font-mono text-[13px] text-cyan-200 ring-1 ring-inset ring-white/[0.06]">{name}</code>
               </li>
             ))}
           </ul>
@@ -311,6 +332,13 @@ export function NotConnected({
           {actions}
         </Actions>
       )}
+    </div>
+  )
+  // Wide panels put what it is on the left and what to do on the right.
+  return (
+    <div className={cx('grid flex-1 content-start gap-8', !permission && plan && plan.length > 0 && 'xl:grid-cols-2 xl:gap-12', permission && 'rounded-xl bg-amber-300/[0.06] p-5 sm:p-6')}>
+      {intro}
+      {next}
     </div>
   )
 }

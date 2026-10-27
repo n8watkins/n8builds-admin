@@ -129,11 +129,11 @@ export const AREAS: Record<AreaId, Area> = {
     label: 'Security alerts',
     icon: LuShieldCheck,
     accent: accent.orange,
-    summary: 'Dependabot warns when a dependency has a known vulnerability, but only where alerts are switched on.',
+    summary: 'Dependabot warns when a dependency has a known vulnerability. Alerts are on for every build repo.',
     about: [
       'Dependabot compares each repo\'s dependencies with GitHub\'s vulnerability database and opens an alert for each match.',
-      'Alerts are off by default on new repos, so a repo with alerts off reports nothing even when it is affected.',
-      'Turning them on is free and takes one click per repo.',
+      'Each alert names the vulnerable package and the version that fixes it; Dependabot can open a pull request with the fix.',
+      'Critical and high come first: those are worth fixing soon, especially in a deployed site.',
     ],
   },
   demos: {

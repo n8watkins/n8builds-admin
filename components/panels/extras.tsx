@@ -69,7 +69,7 @@ export async function DemoStatus() {
       </ul>
       <p className="text-[14px] text-slate-400">{feed.updatedAt ? `OpenPing last checked ${timeAgo(feed.updatedAt)}.` : ''} Grey days are scheduled off-hours; amber days had slow responses.</p>
       <Actions>
-        <ExternalAction href={STATUS_PAGE} variant="primary" describe="Open the OpenPing status page">
+        <ExternalAction href={STATUS_PAGE} describe="Open the OpenPing status page">
           Status page
         </ExternalAction>
         <ExternalAction href="https://openping.n8builds.dev" describe="Open OpenPing">
@@ -167,7 +167,7 @@ export async function SecurityAlerts() {
                   <>
                     <span className="text-[14px] text-slate-400">{severity ? [severity.critical && `${severity.critical} critical`, severity.high && `${severity.high} high`].filter(Boolean).join(', ') : ''}</span>
                     <StatusPill tone={severity && severity.critical + severity.high > 0 ? 'bad' : 'warn'}>{count} open</StatusPill>
-                    <ExternalAction href={`https://github.com/${tracked.repo}/security/dependabot`} variant="primary" describe={`Review ${shortName(tracked.repo)} alerts on GitHub`}>
+                    <ExternalAction href={`https://github.com/${tracked.repo}/security/dependabot`} describe={`Review ${shortName(tracked.repo)} alerts on GitHub`}>
                       Alerts
                     </ExternalAction>
                   </>
