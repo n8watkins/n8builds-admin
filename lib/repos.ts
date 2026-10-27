@@ -16,21 +16,23 @@ export type TrackedRepo = {
   branch: 'main' | 'master'
   /** Its Vercel project (team natkins23s-projects), when it deploys there. */
   vercelProject?: string
+  /** Where people use it: the live site, or its page on n8builds.dev. */
+  site: string
 }
 
 export const PERSONAL_ACCOUNT = 'n8watkins'
 export const APPTURNITY_ORG = 'Appturnity'
 
 export const TRACKED_REPOS: TrackedRepo[] = [
-  { repo: 'n8watkins/n8builds-web', label: 'n8builds.dev', branch: 'main', vercelProject: 'n8builds-web' },
-  { repo: 'n8watkins/dev-portfolio', label: 'portfolio.n8builds.dev', branch: 'main', vercelProject: 'portfolio' },
-  { repo: 'n8watkins/portfolio-rank', label: 'Portfolio Rank', branch: 'main', vercelProject: 'portfolio-rank' },
-  { repo: 'n8watkins/open-ping', label: 'OpenPing', branch: 'main' },
-  { repo: 'n8watkins/scribe', label: 'Scribe', branch: 'main', vercelProject: 'scribe' },
-  { repo: 'n8watkins/solara', label: 'Solara', branch: 'main' },
-  { repo: 'n8watkins/piper-tts', label: 'Piper TTS', branch: 'master' },
-  { repo: 'n8watkins/tl-dw', label: 'TL;DW', branch: 'master' },
-  { repo: 'n8watkins/tube-vault', label: 'TubeVault', branch: 'master' },
+  { repo: 'n8watkins/n8builds-web', label: 'n8builds.dev', branch: 'main', vercelProject: 'n8builds-web', site: 'https://n8builds.dev' },
+  { repo: 'n8watkins/dev-portfolio', label: 'Developer portfolio', branch: 'main', vercelProject: 'portfolio', site: 'https://portfolio.n8builds.dev' },
+  { repo: 'n8watkins/portfolio-rank', label: 'Portfolio Rank', branch: 'main', vercelProject: 'portfolio-rank', site: 'https://portfoliorank.vercel.app' },
+  { repo: 'n8watkins/open-ping', label: 'OpenPing', branch: 'main', site: 'https://openping.n8builds.dev' },
+  { repo: 'n8watkins/scribe', label: 'Scribe', branch: 'main', vercelProject: 'scribe', site: 'https://scribe.n8builds.dev' },
+  { repo: 'n8watkins/solara', label: 'Solara', branch: 'main', site: 'https://solara-uv.web.app' },
+  { repo: 'n8watkins/piper-tts', label: 'Piper TTS', branch: 'master', site: 'https://n8builds.dev/builds/piper-tts' },
+  { repo: 'n8watkins/tl-dw', label: 'TL;DW', branch: 'master', site: 'https://n8builds.dev/builds/tldw' },
+  { repo: 'n8watkins/tube-vault', label: 'TubeVault', branch: 'master', site: 'https://n8builds.dev/builds/tubevault' },
 ]
 
 /** GitHub Free's included Actions minutes per month, for a personal account and for a free org. */

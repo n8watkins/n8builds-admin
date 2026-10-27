@@ -12,6 +12,7 @@ import {
   type WorkflowRun,
 } from '@/lib/github'
 import { APPTURNITY_ORG, FREE_ACTIONS_MINUTES, TRACKED_REPOS, shortName } from '@/lib/repos'
+import { ProjectIcon } from '../ProjectIcon'
 import { Actions, BarList, Dot, ExternalAction, Meter, NotConnected, OutLink, PanelError, Stat, StatusPill, cx, type Tone } from '../ui'
 
 export function GitHubNotConnected() {
@@ -69,11 +70,14 @@ export async function CiStatus() {
         return (
           <li key={tracked.repo} className="py-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-[17px] font-semibold text-slate-50">{shortName(tracked.repo)}</p>
-                <p className="text-[14px] text-slate-400">
-                  {tracked.label} · <span className="font-mono">{defaultBranch}</span>
-                </p>
+              <div className="flex min-w-0 items-center gap-3">
+                <ProjectIcon repo={tracked.repo} size={36} />
+                <div className="min-w-0">
+                  <p className="truncate text-[16px] font-semibold text-slate-50">{tracked.label}</p>
+                  <p className="truncate font-mono text-[13px] text-slate-400">
+                    {shortName(tracked.repo)} · {defaultBranch}
+                  </p>
+                </div>
               </div>
               <StatusPill tone={tone}>{tone === 'idle' ? 'No CI runs' : failing.length > 0 ? `${failing.length} failing` : 'Passing'}</StatusPill>
             </div>
@@ -108,12 +112,12 @@ export async function CiStatus() {
             )}
             <Actions className="mt-4">
               {failing[0] && (
-                <ExternalAction href={failing[0].url} variant="primary">
-                  Open the failing run
+                <ExternalAction href={failing[0].url} variant="primary" describe={`Open the failing ${failing[0].workflow} run on GitHub`}>
+                  Failing run
                 </ExternalAction>
               )}
-              <ExternalAction href={`https://github.com/${tracked.repo}/actions`} icon={LuGithub}>
-                All runs on GitHub
+              <ExternalAction href={`https://github.com/${tracked.repo}/actions`} icon={LuGithub} describe={`All ${shortName(tracked.repo)} runs on GitHub`}>
+                Runs
               </ExternalAction>
             </Actions>
           </li>
@@ -159,11 +163,15 @@ export async function OrgMinutes() {
         </div>
       )}
       <Actions>
-        <ExternalAction href={ORG_BILLING} variant="primary" icon={LuGithub}>
-          Open Appturnity billing on GitHub
+        <ExternalAction href={ORG_BILLING} variant="primary" icon={LuGithub} describe="Open Appturnity billing on GitHub">
+          Billing
         </ExternalAction>
-        <ExternalAction href={`https://github.com/organizations/${APPTURNITY_ORG}/settings/billing/budgets`}>Set a spending budget</ExternalAction>
-        <ExternalAction href={`https://github.com/${APPTURNITY_ORG}/monorepo-app/actions`}>monorepo-app runs</ExternalAction>
+        <ExternalAction href={`https://github.com/organizations/${APPTURNITY_ORG}/settings/billing/budgets`} describe="Set an Actions spending budget for Appturnity">
+          Budget
+        </ExternalAction>
+        <ExternalAction href={`https://github.com/${APPTURNITY_ORG}/monorepo-app/actions`} describe="monorepo-app workflow runs on GitHub">
+          Runs
+        </ExternalAction>
       </Actions>
     </div>
   )
@@ -178,8 +186,8 @@ export async function PersonalMinutes() {
         <Stat label="Used this month" value={`${formatNumber(personal.data.total)} / ${formatNumber(FREE_ACTIONS_MINUTES)}`} hint="minutes" />
         <Meter value={personal.data.total} max={FREE_ACTIONS_MINUTES} label="Personal Actions minutes used this month" />
         <Actions>
-          <ExternalAction href="https://github.com/settings/billing" icon={LuGithub}>
-            Open your billing on GitHub
+          <ExternalAction href="https://github.com/settings/billing" icon={LuGithub} describe="Open your personal billing on GitHub">
+            Billing
           </ExternalAction>
         </Actions>
       </div>
@@ -196,8 +204,8 @@ export async function PersonalMinutes() {
       needs={['GITHUB_TOKEN with Plan: read']}
       setupId="github"
       actions={
-        <ExternalAction href="https://github.com/settings/billing" icon={LuGithub}>
-          Open your billing on GitHub
+        <ExternalAction href="https://github.com/settings/billing" icon={LuGithub} describe="Open your personal billing on GitHub">
+          Billing
         </ExternalAction>
       }
     />
@@ -224,54 +232,53 @@ export async function RepoStats() {
   const views = sum((row) => (row.views.ok ? row.views.data.count : 0))
   const viewers = sum((row) => (row.views.ok ? row.views.data.uniques : 0))
   const clones = sum((row) => (row.clones.ok ? row.clones.data.count : 0))
-  const cloners = sum((row) => (row.clones.ok ? row.clones.data.uniques : 0))
-  const traffic = (result: (typeof rows)[number]['views']) =>
-    result.ok ? (
-      <>
-        <span className="text-slate-50">{formatNumber(result.data.count)}</span>
-        <span className="block text-[14px] text-slate-400">{formatNumber(result.data.uniques)} unique</span>
-      </>
-    ) : (
-      <span className="text-slate-400" title={result.message}>
-        n/a
-      </span>
-    )
+  // Most viewed first: views are the signal of people.
+  const sorted = [...rows].sort((a, b) => (b.views.ok ? b.views.data.count : -1) - (a.views.ok ? a.views.data.count : -1))
   return (
     <div className="flex flex-col gap-8">
-      <div className="grid grid-cols-2 gap-6 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-6">
         <Stat label="Stars" value={formatNumber(stars)} hint={`across ${TRACKED_REPOS.length} public repos`} />
-        <Stat label="Views, 14 days" value={formatNumber(views)} hint={`${formatNumber(viewers)} unique visitors`} />
-        <Stat label="Clones, 14 days" value={formatNumber(clones)} hint={`${formatNumber(cloners)} unique (mostly bots)`} />
+        <Stat label="Repo views, 14 days" value={formatNumber(views)} hint={`${formatNumber(viewers)} different people`} />
       </div>
-      <div className="-mx-1 overflow-x-auto">
-        <table className="w-full min-w-[340px] text-left text-[15px]">
-          <caption className="sr-only">Stars, and views and clones over the last 14 days, per repo</caption>
-          <thead>
-            <tr className="text-[14px] text-slate-400">
-              <th scope="col" className="px-1 pb-3 font-medium">Repo</th>
-              <th scope="col" className="px-1 pb-3 text-right font-medium">Stars</th>
-              <th scope="col" className="px-1 pb-3 text-right font-medium">Views</th>
-              <th scope="col" className="px-1 pb-3 text-right font-medium">Clones</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/[0.06] tabular-nums">
-            {rows.map(({ tracked, repo, views: repoViews, clones: repoClones }) => (
-              <tr key={tracked.repo}>
-                <th scope="row" className="px-1 py-3.5 text-left align-top font-normal">
-                  <OutLink href={`https://github.com/${tracked.repo}/graphs/traffic`} className="font-medium text-slate-50 hover:text-cyan-200">
-                    {shortName(tracked.repo)}
-                  </OutLink>
-                  <span className="block text-[14px] text-slate-400">{tracked.label}</span>
-                </th>
-                <td className="px-1 py-3.5 text-right align-top text-slate-50">{repo.ok ? formatNumber(repo.data.stargazers_count) : 'n/a'}</td>
-                <td className="px-1 py-3.5 text-right align-top">{traffic(repoViews)}</td>
-                <td className="px-1 py-3.5 text-right align-top">{traffic(repoClones)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <ul className="-my-2 divide-y divide-white/[0.06]">
+        {sorted.map(({ tracked, repo, views: repoViews, clones: repoClones }) => (
+          <li key={tracked.repo} className="flex flex-wrap items-center gap-x-6 gap-y-3 py-4">
+            <div className="flex min-w-0 flex-1 basis-56 items-center gap-3">
+              <ProjectIcon repo={tracked.repo} size={36} />
+              <div className="min-w-0">
+                <p className="truncate text-[16px] font-semibold text-slate-50">{tracked.label}</p>
+                <p className="truncate font-mono text-[13px] text-slate-400">{shortName(tracked.repo)}</p>
+              </div>
+            </div>
+            <dl className="flex items-center gap-6 text-right tabular-nums">
+              <div className="w-14">
+                <dt className="text-[13px] text-slate-400">Stars</dt>
+                <dd className="text-[17px] font-semibold text-slate-50">{repo.ok ? repo.data.stargazers_count : 'n/a'}</dd>
+              </div>
+              <div className="w-24">
+                <dt className="text-[13px] text-slate-400">Views</dt>
+                <dd className="text-[17px] font-semibold text-slate-50">
+                  {repoViews.ok ? formatNumber(repoViews.data.count) : 'n/a'}
+                  {repoViews.ok && <span className="ml-1 text-[13px] font-normal text-slate-400">({repoViews.data.uniques})</span>}
+                </dd>
+              </div>
+              <div className="w-16">
+                <dt className="text-[13px] text-slate-400">Clones</dt>
+                <dd className="text-[15px] text-slate-400">{repoClones.ok ? formatNumber(repoClones.data.count) : 'n/a'}</dd>
+              </div>
+            </dl>
+            <OutLink href={`https://github.com/${tracked.repo}/graphs/traffic`} className="text-[14px]">
+              Traffic
+            </OutLink>
+          </li>
+        ))}
+      </ul>
+      <div className="rounded-xl bg-white/[0.03] p-5 text-[15px] leading-relaxed text-slate-300 ring-1 ring-inset ring-white/[0.05]">
+        <p className="font-semibold text-slate-100">Why views, not clones</p>
+        <p className="mt-1.5">
+          Views (in brackets: different people) are visits to the repo&apos;s page on GitHub, so they are people looking. Clones ({formatNumber(clones)} in 14 days) count every <code className="font-mono text-[0.9em]">git clone</code>: GitHub Actions checking out the code for CI, Vercel, Render and Firebase builds, Dependabot, and your own machines. GitHub doesn&apos;t say who cloned, so thousands of clones on a repo with busy CI (like Solara) are almost certainly automation, not people.
+        </p>
       </div>
-      <p className="text-[14px] leading-relaxed text-slate-400">Each repo name opens its traffic graph on GitHub. Clones are mostly automated (CI, mirrors, bots), so views are the better signal of people.</p>
     </div>
   )
 }

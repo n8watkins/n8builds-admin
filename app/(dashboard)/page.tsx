@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { OverviewCards, OverviewSkeleton } from '@/components/Overview'
+import { OverviewCards, OverviewSkeleton, OverviewStrip, StripSkeleton } from '@/components/Overview'
 import { PanelBoundary } from '@/components/PanelBoundary'
 import { PageHeader } from '@/components/ui'
 import { AREAS } from '@/lib/areas'
@@ -10,7 +10,12 @@ export default async function OverviewPage() {
   const now = new Date().toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/Los_Angeles' })
   return (
     <>
-      <PageHeader area={AREAS.overview} lead={`${now} (Pacific). Everything at a glance, with what needs attention first. Numbers refresh every 5 minutes.`} />
+      <PageHeader area={AREAS.overview} lead={`${now} (Pacific). What needs attention comes first; numbers refresh every 5 minutes.`} />
+      <PanelBoundary>
+        <Suspense fallback={<StripSkeleton />}>
+          <OverviewStrip />
+        </Suspense>
+      </PanelBoundary>
       <PanelBoundary>
         <Suspense fallback={<OverviewSkeleton />}>
           <OverviewCards />

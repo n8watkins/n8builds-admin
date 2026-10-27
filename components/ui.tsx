@@ -32,7 +32,14 @@ export function AreaIcon({ area, size = 'md' }: { area: Pick<Area, 'icon' | 'acc
 // ---------------------------------------------------------------------------
 // Actions: inside the admin (arrow) vs another site (arrow out of a box, new tab)
 
-type ActionProps = { href: string; children: ReactNode; variant?: 'primary' | 'secondary' | 'quiet'; icon?: IconType }
+type ActionProps = {
+  href: string
+  /** A short label ("Billing"); `describe` says the whole thing for tooltips and screen readers. */
+  children: ReactNode
+  describe?: string
+  variant?: 'primary' | 'secondary' | 'quiet'
+  icon?: IconType
+}
 
 const ACTION = {
   primary: 'bg-cyan-400 text-darkBlue hover:bg-cyan-300',
@@ -41,25 +48,26 @@ const ACTION = {
 }
 
 /** Goes somewhere outside the admin, in a new tab. */
-export function ExternalAction({ href, children, variant = 'secondary', icon: Icon }: ActionProps) {
+export function ExternalAction({ href, children, describe, variant = 'secondary', icon: Icon }: ActionProps) {
   return (
     <a
       href={href}
       target="_blank"
       rel="noreferrer"
+      title={describe ? `${describe} (new tab)` : undefined}
       className={cx('inline-flex min-h-10 items-center gap-2 rounded-lg text-[14px] font-medium transition-colors', variant !== 'quiet' && 'px-3.5', ACTION[variant])}>
       {Icon && <Icon aria-hidden className="size-4" />}
       {children}
       <LuExternalLink aria-hidden className="size-3.5 opacity-70" />
-      <span className="sr-only">(opens in a new tab)</span>
+      <span className="sr-only">{describe ? `: ${describe}, opens in a new tab` : '(opens in a new tab)'}</span>
     </a>
   )
 }
 
 /** Goes to another page of the admin. */
-export function InternalAction({ href, children, variant = 'secondary' }: ActionProps) {
+export function InternalAction({ href, children, describe, variant = 'secondary' }: ActionProps) {
   return (
-    <Link href={href} className={cx('inline-flex min-h-10 items-center gap-2 rounded-lg text-[14px] font-medium transition-colors', variant !== 'quiet' && 'px-3.5', ACTION[variant])}>
+    <Link href={href} title={describe} className={cx('inline-flex min-h-10 items-center gap-2 rounded-lg text-[14px] font-medium transition-colors', variant !== 'quiet' && 'px-3.5', ACTION[variant])}>
       {children}
       <LuArrowRight aria-hidden className="size-4" />
     </Link>
@@ -296,8 +304,8 @@ export function NotConnected({
       {(setupId || actions) && (
         <Actions>
           {setupId && (
-            <InternalAction href={`/setup#${setupId}`} variant="primary">
-              How to connect it
+            <InternalAction href={`/setup#${setupId}`} variant="primary" describe="How to connect it, on the Setup page">
+              Set up
             </InternalAction>
           )}
           {actions}

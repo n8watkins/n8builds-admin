@@ -18,8 +18,8 @@ export default async function Page() {
       <PageHeader
         area={area}
         actions={
-          <ExternalAction href="https://github.com/n8watkins?tab=repositories" icon={LuGithub}>
-            Your repos on GitHub
+          <ExternalAction href="https://github.com/n8watkins?tab=repositories" icon={LuGithub} describe="Your repos on GitHub">
+            Repos
           </ExternalAction>
         }
       />

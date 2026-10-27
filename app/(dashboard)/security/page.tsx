@@ -17,7 +17,7 @@ export default async function Page() {
       <PageHeader
         area={area}
       />
-      <Panel id="security" title="Dependabot, by repo" description="Turn alerts on where they're off; each button opens that repo's security settings on GitHub.">
+      <Panel id="security" title="Dependabot, by repo" description="Open alerts per repo, most first, with how many are critical or high. Each button opens them on GitHub.">
         <Slot rows={6}>
           <SecurityAlerts />
         </Slot>

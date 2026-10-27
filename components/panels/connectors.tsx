@@ -22,7 +22,9 @@ export async function SentryPanel() {
         willShow={['Unresolved issues', 'New this week', 'Events per issue', 'Errors this month vs the free 5,000']}
         needs={['SENTRY_AUTH_TOKEN', 'SENTRY_ORG', 'SENTRY_PROJECTS']}
         setupId="sentry"
-        actions={<ExternalAction href="https://sentry.io/settings/account/api/auth-tokens/">Create a Sentry token</ExternalAction>}
+        actions={<ExternalAction href="https://sentry.io/settings/account/api/auth-tokens/" describe="Create a Sentry auth token">
+            Sentry tokens
+          </ExternalAction>}
       />
     )
   }
@@ -52,8 +54,8 @@ export async function SentryPanel() {
         ))}
       </ul>
       <Actions>
-        <ExternalAction href={`https://${summary.org}.sentry.io/issues/`} variant="primary">
-          View on Sentry
+        <ExternalAction href={`https://${summary.org}.sentry.io/issues/`} variant="primary" describe="View the issues on Sentry">
+          Sentry
         </ExternalAction>
       </Actions>
     </div>
@@ -73,8 +75,12 @@ export async function TrafficPanel() {
         setupId="ga4"
         actions={
           <>
-            <ExternalAction href="https://analytics.google.com/analytics/web/">Open Google Analytics</ExternalAction>
-            <ExternalAction href="https://console.cloud.google.com/iam-admin/serviceaccounts">Google Cloud service accounts</ExternalAction>
+            <ExternalAction href="https://analytics.google.com/analytics/web/" describe="Open Google Analytics">
+              Analytics
+            </ExternalAction>
+            <ExternalAction href="https://console.cloud.google.com/iam-admin/serviceaccounts" describe="Google Cloud service accounts">
+              Service accounts
+            </ExternalAction>
           </>
         }
       />
@@ -109,8 +115,8 @@ export async function TrafficPanel() {
         ))}
       </div>
       <Actions>
-        <ExternalAction href="https://analytics.google.com/analytics/web/" variant="primary">
-          Open Google Analytics
+        <ExternalAction href="https://analytics.google.com/analytics/web/" variant="primary" describe="Open Google Analytics">
+          Analytics
         </ExternalAction>
       </Actions>
     </div>
@@ -136,7 +142,9 @@ export async function ReferralsPanel() {
         needs={STORE_VARS}
         plan={REFERRAL_PLAN}
         setupId="upstash"
-        actions={<ExternalAction href="https://appturnity.com">Open appturnity.com</ExternalAction>}
+        actions={<ExternalAction href="https://appturnity.com" describe="Open appturnity.com">
+            appturnity.com
+          </ExternalAction>}
       />
     )
   }
@@ -182,7 +190,9 @@ export async function ContactPanel() {
         needs={STORE_VARS}
         plan={CONTACT_PLAN}
         setupId="upstash"
-        actions={<ExternalAction href="https://mail.google.com">Open Gmail</ExternalAction>}
+        actions={<ExternalAction href="https://mail.google.com" describe="Open Gmail">
+            Gmail
+          </ExternalAction>}
       />
     )
   }
@@ -260,8 +270,8 @@ export function AiCrawlersCard() {
         </span>
       </p>
       <Actions>
-        <ExternalAction href={`https://vercel.com/${VERCEL_TEAM}/n8builds-web/firewall`} variant="primary">
-          Open the Vercel Firewall
+        <ExternalAction href={`https://vercel.com/${VERCEL_TEAM}/n8builds-web/firewall`} variant="primary" describe="Open the Vercel Firewall for n8builds-web">
+          Firewall
         </ExternalAction>
       </Actions>
     </div>

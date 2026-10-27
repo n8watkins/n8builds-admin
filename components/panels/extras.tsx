@@ -1,9 +1,10 @@
 import { LuGithub } from 'react-icons/lu'
 import { formatNumber, timeAgo } from '@/lib/format'
-import { getDependabotAlerts, getLatestDeployments, getLatestRelease, getMonthActivity, isGitHubConnected } from '@/lib/github'
+import { getAlertSeverities, getDependabotAlerts, getMonthActivity, isGitHubConnected } from '@/lib/github'
 import { STATUS_PAGE, getDemoStatus } from '@/lib/openping'
-import { TRACKED_REPOS, shortName, vercelProjectUrl } from '@/lib/repos'
-import { Actions, BarList, Dot, ExternalAction, OutLink, PanelError, Stat, StatusPill, cx, errorMessage, type Tone } from '../ui'
+import { TRACKED_REPOS, shortName } from '@/lib/repos'
+import { Actions, BarList, ExternalAction, OutLink, PanelError, Stat, StatusPill, cx, errorMessage, type Tone } from '../ui'
+import { ProjectIcon } from '../ProjectIcon'
 import { GitHubNotConnected } from './github'
 
 function stateTone(state: string): Tone {
@@ -68,11 +69,15 @@ export async function DemoStatus() {
       </ul>
       <p className="text-[14px] text-slate-400">{feed.updatedAt ? `OpenPing last checked ${timeAgo(feed.updatedAt)}.` : ''} Grey days are scheduled off-hours; amber days had slow responses.</p>
       <Actions>
-        <ExternalAction href={STATUS_PAGE} variant="primary">
-          Open the status page
+        <ExternalAction href={STATUS_PAGE} variant="primary" describe="Open the OpenPing status page">
+          Status page
         </ExternalAction>
-        <ExternalAction href="https://openping.n8builds.dev">Open OpenPing</ExternalAction>
-        <ExternalAction href="https://portfolio.n8builds.dev">See the demos on the portfolio</ExternalAction>
+        <ExternalAction href="https://openping.n8builds.dev" describe="Open OpenPing">
+          OpenPing
+        </ExternalAction>
+        <ExternalAction href="https://portfolio.n8builds.dev" describe="See the demos on the developer portfolio">
+          Portfolio
+        </ExternalAction>
       </Actions>
     </div>
   )
@@ -80,65 +85,6 @@ export async function DemoStatus() {
 
 // ---------------------------------------------------------------------------
 // Deploys, releases and activity
-
-export async function LatestDeploys() {
-  if (!isGitHubConnected()) return <GitHubNotConnected />
-  const result = await getLatestDeployments(8)
-  if (!result.ok) return <PanelError message={result.message} />
-  return (
-    <ul className="-my-2 divide-y divide-white/[0.06]">
-      {result.data.map((deploy) => {
-        const project = vercelProjectUrl(deploy.repo)
-        const production = deploy.environment.toLowerCase().startsWith('production')
-        return (
-          <li key={`${deploy.repo}-${deploy.sha}-${deploy.createdAt}`} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-4">
-            <Dot tone={stateTone(deploy.state ?? '')} label={deploy.state ?? 'unknown'} />
-            <div className="min-w-0 flex-1">
-              <p className="text-[15px] font-medium text-slate-50">
-                {shortName(deploy.repo)}{' '}
-                <span className={cx('ml-1 rounded-md px-2 py-0.5 text-[13px] font-medium', production ? 'bg-teal-400/15 text-teal-200' : 'bg-white/[0.06] text-slate-300')}>{deploy.environment}</span>
-              </p>
-              <p className="mt-0.5 text-[14px] text-slate-400">
-                <span className="font-mono">{deploy.sha}</span> · {timeAgo(deploy.createdAt)}
-              </p>
-            </div>
-            <span className="flex gap-4 text-[14px]">
-              {deploy.url && <OutLink href={deploy.url}>Open deploy</OutLink>}
-              {project && <OutLink href={project}>Vercel</OutLink>}
-            </span>
-          </li>
-        )
-      })}
-    </ul>
-  )
-}
-
-export async function LatestReleases() {
-  if (!isGitHubConnected()) return <GitHubNotConnected />
-  const rows = await Promise.all(TRACKED_REPOS.map(async ({ repo }) => ({ repo, release: await getLatestRelease(repo) })))
-  const released = rows
-    .flatMap(({ repo, release }) => (release.ok && release.data ? [{ repo, ...release.data }] : []))
-    .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
-  const none = rows.filter(({ release }) => release.ok && !release.data).map(({ repo }) => shortName(repo))
-  return (
-    <div className="flex flex-col gap-5">
-      <ul className="-my-2 divide-y divide-white/[0.06]">
-        {released.map((release) => (
-          <li key={release.repo} className="flex flex-wrap items-center justify-between gap-3 py-4">
-            <div>
-              <p className="text-[15px] font-medium text-slate-50">{shortName(release.repo)}</p>
-              <p className="text-[14px] text-slate-400">{timeAgo(release.publishedAt)}</p>
-            </div>
-            <OutLink href={release.url} className="rounded-lg bg-teal-400/12 px-3 py-1.5 font-mono text-[14px] text-teal-100 hover:bg-teal-400/20 hover:text-teal-50">
-              {release.tag}
-            </OutLink>
-          </li>
-        ))}
-      </ul>
-      {none.length > 0 && <p className="text-[14px] leading-relaxed text-slate-400">No releases yet: {none.join(', ')}.</p>}
-    </div>
-  )
-}
 
 export async function MonthActivity() {
   if (!isGitHubConnected()) return <GitHubNotConnected />
@@ -159,7 +105,9 @@ export async function MonthActivity() {
         format={(value) => (value >= 100 ? '100+' : String(value))}
       />
       <Actions>
-        <ExternalAction href="https://n8builds.dev/builds">Open the build log</ExternalAction>
+        <ExternalAction href="https://n8builds.dev/builds" describe="Open the build log on n8builds.dev">
+          Build log
+        </ExternalAction>
       </Actions>
     </div>
   )
@@ -170,24 +118,40 @@ export async function MonthActivity() {
 
 export async function SecurityAlerts() {
   if (!isGitHubConnected()) return <GitHubNotConnected />
-  const rows = await Promise.all(TRACKED_REPOS.map(async (tracked) => ({ tracked, alerts: await getDependabotAlerts(tracked.repo) })))
+  const rows = await Promise.all(
+    TRACKED_REPOS.map(async (tracked) => {
+      const [alerts, severity] = await Promise.all([getDependabotAlerts(tracked.repo), getAlertSeverities(tracked.repo)])
+      return { tracked, alerts, severity }
+    }),
+  )
+  // Most alerts first.
+  rows.sort((a, b) => (b.alerts.ok && typeof b.alerts.data === 'number' ? b.alerts.data : -1) - (a.alerts.ok && typeof a.alerts.data === 'number' ? a.alerts.data : -1))
+  const totals = rows.reduce((sum, { severity }) => ({ critical: sum.critical + (severity?.critical ?? 0), high: sum.high + (severity?.high ?? 0) }), { critical: 0, high: 0 })
   const open = rows.reduce((sum, { alerts }) => sum + (alerts.ok && typeof alerts.data === 'number' ? alerts.data : 0), 0)
   const off = rows.filter(({ alerts }) => alerts.ok && alerts.data === 'disabled').length
   return (
     <div className="flex flex-col gap-8">
       <div className="grid grid-cols-2 gap-6">
-        <Stat label="Open alerts" value={open} tone={open > 0 ? 'bad' : 'good'} hint="where alerts are on" />
-        <Stat label="Repos with alerts off" value={`${off} of ${rows.length}`} tone={off > 0 ? 'warn' : 'good'} hint={off > 0 ? 'these report nothing' : 'every repo is covered'} />
+        <Stat label="Open alerts" value={open} tone={open > 0 ? 'bad' : 'good'} hint={open > 0 ? `${totals.critical} critical, ${totals.high} high` : 'none right now'} />
+        <Stat label="Repos covered" value={`${rows.length - off} of ${rows.length}`} tone={off > 0 ? 'warn' : 'good'} hint={off > 0 ? `${off} have alerts off and report nothing` : 'alerts are on everywhere'} />
       </div>
+      {off === 0 && open === 0 && (
+        <p className="text-[15px] leading-relaxed text-slate-300">
+          Alerts are on for every repo and none are open. Right after alerts are switched on, GitHub can take a few minutes to scan; anything it finds shows up here within 5 minutes.
+        </p>
+      )}
       <ul className="-my-2 divide-y divide-white/[0.06]">
-        {rows.map(({ tracked, alerts }) => {
+        {rows.map(({ tracked, alerts, severity }) => {
           const disabled = alerts.ok && alerts.data === 'disabled'
           const count = alerts.ok && typeof alerts.data === 'number' ? alerts.data : null
           return (
             <li key={tracked.repo} className="flex flex-wrap items-center justify-between gap-3 py-4">
-              <div className="min-w-0">
-                <p className="text-[15px] font-medium text-slate-50">{shortName(tracked.repo)}</p>
-                <p className="text-[14px] text-slate-400">{tracked.label}</p>
+              <div className="flex min-w-0 items-center gap-3">
+                <ProjectIcon repo={tracked.repo} size={32} />
+                <div className="min-w-0">
+                  <p className="truncate text-[15px] font-semibold text-slate-50">{tracked.label}</p>
+                  <p className="truncate font-mono text-[13px] text-slate-400">{shortName(tracked.repo)}</p>
+                </div>
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 {!alerts.ok ? (
@@ -195,19 +159,25 @@ export async function SecurityAlerts() {
                 ) : disabled ? (
                   <>
                     <StatusPill tone="warn">Alerts off</StatusPill>
-                    <ExternalAction href={`https://github.com/${tracked.repo}/settings/security_analysis`} icon={LuGithub}>
-                      Turn on alerts
+                    <ExternalAction href={`https://github.com/${tracked.repo}/settings/security_analysis`} icon={LuGithub} describe={`Turn on Dependabot alerts for ${shortName(tracked.repo)}`}>
+                      Turn on
                     </ExternalAction>
                   </>
                 ) : count && count > 0 ? (
                   <>
-                    <StatusPill tone="bad">{count} open</StatusPill>
-                    <ExternalAction href={`https://github.com/${tracked.repo}/security/dependabot`} variant="primary">
-                      Review alerts
+                    <span className="text-[14px] text-slate-400">{severity ? [severity.critical && `${severity.critical} critical`, severity.high && `${severity.high} high`].filter(Boolean).join(', ') : ''}</span>
+                    <StatusPill tone={severity && severity.critical + severity.high > 0 ? 'bad' : 'warn'}>{count} open</StatusPill>
+                    <ExternalAction href={`https://github.com/${tracked.repo}/security/dependabot`} variant="primary" describe={`Review ${shortName(tracked.repo)} alerts on GitHub`}>
+                      Alerts
                     </ExternalAction>
                   </>
                 ) : (
-                  <StatusPill tone="good">No open alerts</StatusPill>
+                  <>
+                    <StatusPill tone="good">Alerts on, none open</StatusPill>
+                    <OutLink href={`https://github.com/${tracked.repo}/security/dependabot`} className="text-[14px]">
+                      Dependabot
+                    </OutLink>
+                  </>
                 )}
               </div>
             </li>

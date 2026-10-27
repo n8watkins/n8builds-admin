@@ -1,6 +1,7 @@
 import 'server-only'
 import { cache } from 'react'
 import { REVALIDATE_SECONDS } from './cache'
+import { releaseSummary } from './release-notes'
 import { traced } from './trace'
 import { APPTURNITY_ORG, PERSONAL_ACCOUNT, TRACKED_REPOS } from './repos'
 
@@ -21,14 +22,14 @@ function tokenFor(owner: 'personal' | 'org'): string | undefined {
   return owner === 'org' ? process.env.GITHUB_ORG_TOKEN || process.env.GITHUB_TOKEN : process.env.GITHUB_TOKEN
 }
 
-async function gh<T>(path: string, owner: 'personal' | 'org' = 'personal'): Promise<Fetched<T>> {
+async function gh<T>(path: string, owner: 'personal' | 'org' = 'personal', accept = 'application/vnd.github+json'): Promise<Fetched<T>> {
   const token = tokenFor(owner)
   if (!token) return { ok: false, status: 0, message: 'No GitHub token' }
   try {
     const response = await traced(`github ${path}`, () => fetch(`${API}${path}`, {
       headers: {
         Authorization: `Bearer ${token}`,
-        Accept: 'application/vnd.github+json',
+        Accept: accept,
         'X-GitHub-Api-Version': '2022-11-28',
       },
       next: { revalidate: REVALIDATE_SECONDS },
@@ -182,22 +183,34 @@ export const getPersonalMinutes = cache(async (): Promise<Fetched<MinutesUsage>>
 // ---------------------------------------------------------------------------
 // Traffic, releases, alerts, deployments, activity
 
-export type Traffic = { count: number; uniques: number }
+export type TrafficDay = { timestamp: string; count: number; uniques: number }
+
+/** GitHub's last 14 days: totals plus one entry per day that had traffic. */
+export type Traffic = { count: number; uniques: number; views?: TrafficDay[]; clones?: TrafficDay[] }
 
 export const getViews = cache((repo: string) => gh<Traffic>(`/repos/${repo}/traffic/views`))
 export const getClones = cache((repo: string) => gh<Traffic>(`/repos/${repo}/traffic/clones`))
 
-export type Release = { tag: string; name: string; publishedAt: string; url: string }
+export type Release = {
+  tag: string
+  name: string
+  publishedAt: string
+  url: string
+  /** The first real line of its notes (headings and empty lines skipped), if any. */
+  summary: string | null
+}
 
 export const getLatestRelease = cache(async (repo: string): Promise<Fetched<Release | null>> => {
-  const result = await gh<{ tag_name: string; name: string | null; published_at: string; html_url: string; draft: boolean }[]>(
+  const result = await gh<{ tag_name: string; name: string | null; published_at: string; html_url: string; draft: boolean; body: string | null }[]>(
     `/repos/${repo}/releases?per_page=5`,
   )
   if (!result.ok) return result
   const release = result.data.find((item) => !item.draft)
   return {
     ok: true,
-    data: release ? { tag: release.tag_name, name: release.name || release.tag_name, publishedAt: release.published_at, url: release.html_url } : null,
+    data: release
+      ? { tag: release.tag_name, name: release.name || release.tag_name, publishedAt: release.published_at, url: release.html_url, summary: releaseSummary(release.body) }
+      : null,
   }
 })
 
@@ -207,6 +220,20 @@ export const getDependabotAlerts = cache(async (repo: string): Promise<Fetched<n
   if (result.ok) return { ok: true, data: result.data.length }
   if (result.status === 403 && /disabled/i.test(result.message)) return { ok: true, data: 'disabled' }
   return result
+})
+
+export type Severity = 'critical' | 'high' | 'medium' | 'low'
+
+/** Open alerts by severity (the same request as getDependabotAlerts, served from its cache). */
+export const getAlertSeverities = cache(async (repo: string): Promise<Record<Severity, number> | null> => {
+  const result = await gh<{ security_advisory?: { severity?: string } }[]>(`/repos/${repo}/dependabot/alerts?state=open&per_page=100`)
+  if (!result.ok) return null
+  const counts: Record<Severity, number> = { critical: 0, high: 0, medium: 0, low: 0 }
+  for (const alert of result.data) {
+    const severity = alert.security_advisory?.severity as Severity | undefined
+    if (severity && severity in counts) counts[severity] += 1
+  }
+  return counts
 })
 
 export type Deployment = {
@@ -273,4 +300,56 @@ export const getMonthActivity = cache(async (): Promise<Fetched<MonthActivity[]>
   const data = rows.filter((row): row is MonthActivity => row !== null)
   if (data.length === 0) return { ok: false, status: 0, message: 'No repo answered' }
   return { ok: true, data: data.sort((a, b) => b.commits - a.commits) }
+})
+
+// ---------------------------------------------------------------------------
+// Per-project release and deploy detail (the Releases and deploys page)
+
+/** Commits on the default branch since a tag: what is waiting for the next release. */
+export const getCommitsSince = cache(async (repo: string, tag: string): Promise<Fetched<number>> => {
+  const result = await gh<{ ahead_by: number }>(`/repos/${repo}/compare/${encodeURIComponent(tag)}...${trackedBranch(repo)}`)
+  return result.ok ? { ok: true, data: result.data.ahead_by } : result
+})
+
+async function withStatus(repo: string, item: RawDeployment): Promise<Deployment> {
+  const statuses = await gh<{ state: string; environment_url?: string; target_url?: string }[]>(`/repos/${repo}/deployments/${item.id}/statuses?per_page=1`)
+  const latest = statuses.ok ? statuses.data[0] : undefined
+  return {
+    repo,
+    environment: item.environment,
+    ref: item.ref,
+    sha: item.sha.slice(0, 7),
+    createdAt: item.created_at,
+    state: latest?.state ?? null,
+    url: latest?.environment_url || latest?.target_url || null,
+  }
+}
+
+/** The newest Production deployment of a repo, with its state, or null if it never deployed to production. */
+export const getProductionDeploy = cache(async (repo: string): Promise<Fetched<Deployment | null>> => {
+  const result = await gh<RawDeployment[]>(`/repos/${repo}/deployments?environment=Production&per_page=1`)
+  if (!result.ok) return result
+  const item = result.data[0]
+  return { ok: true, data: item ? await withStatus(repo, item) : null }
+})
+
+/** The newest Preview deployments across the tracked repos. */
+export const getPreviewDeploys = cache(async (limit = 8): Promise<Fetched<Deployment[]>> => {
+  const lists = await Promise.all(
+    TRACKED_REPOS.map(async ({ repo }) => ({ repo, result: await gh<RawDeployment[]>(`/repos/${repo}/deployments?environment=Preview&per_page=3`) })),
+  )
+  const newest = lists
+    .flatMap(({ repo, result }) => (result.ok ? result.data.map((item) => ({ repo, item })) : []))
+    .sort((a, b) => b.item.created_at.localeCompare(a.item.created_at))
+    .slice(0, limit)
+  return { ok: true, data: await Promise.all(newest.map(({ repo, item }) => withStatus(repo, item))) }
+})
+
+// ---------------------------------------------------------------------------
+// Star history (for the Overview's sparkline)
+
+/** When each star was given, oldest first (GitHub's star+json media type adds starred_at). */
+export const getStarDates = cache(async (repo: string): Promise<Fetched<string[]>> => {
+  const result = await gh<{ starred_at: string }[]>(`/repos/${repo}/stargazers?per_page=100`, 'personal', 'application/vnd.github.star+json')
+  return result.ok ? { ok: true, data: result.data.map((star) => star.starred_at).sort() } : result
 })
