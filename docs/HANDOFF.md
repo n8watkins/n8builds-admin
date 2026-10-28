@@ -14,7 +14,7 @@ Setup details: `docs/SETUP.md`.
 - Vercel deploys `main` only (2026-10-28, `git.deploymentEnabled` in `vercel.json`): other branches get no automatic preview, to stay under the 100 deployments a day the account shares. Run `vercel deploy` from a branch for one.
 - The Dino game page reads the analytics Redis that n8builds.dev's `POST /api/game` writes to; it shows "not connected" until that Redis exists.
 - The Security page shows live Dependabot counts for the build repos.
-- `GITHUB_TOKEN` (used for the GitHub data) expires on 2027-10-27; renew it before then.
+- `GITHUB_TOKEN` (used for the GitHub data) expires on 2027-10-27, and `GITHUB_ORG_TOKEN` (`n8builds-admin billing`: Appturnity, Administration read-only, for the Actions minutes card) on 2027-10-28; renew both before then.
 - CI (`.github/workflows/ci.yml`, 2026-10-28) runs lint, types, unit tests, both builds and the E2E specs on every PR and push to `main`, without secrets. "CI result" is the check to require if the repo ever gets rulesets (private repos need GitHub Pro).
 
 ### Next
