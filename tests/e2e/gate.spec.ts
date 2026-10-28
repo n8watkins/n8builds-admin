@@ -47,6 +47,36 @@ test.describe('sign-in gate (normal build)', () => {
     }
   })
 
+  test('only the exact public paths skip the gate', async ({ request }) => {
+    for (const path of ['/loginx', '/login-anything', '/robots.txt.bak']) {
+      const response = await request.get(path, { maxRedirects: 0 })
+      expect(response.status(), path).toBe(307)
+      expect(response.headers().location, path).toMatch(/\/login$/)
+    }
+  })
+
+  test('pages send a CSP whose scripts need a fresh nonce on every request', async ({ request }) => {
+    const nonceOf = async () => {
+      const csp = (await request.get('/login')).headers()['content-security-policy'] ?? ''
+      expect(csp).toMatch(/script-src 'self' 'nonce-[A-Za-z0-9+/=]+' 'strict-dynamic'/)
+      expect(csp).not.toMatch(/script-src[^;]*'unsafe-inline'/)
+      expect(csp).toContain("frame-ancestors 'none'")
+      return csp.match(/'nonce-([^']+)'/)?.[1]
+    }
+    expect(await nonceOf()).not.toBe(await nonceOf())
+  })
+
+  test('the sign-in page runs under its CSP without a violation', async ({ page }) => {
+    await page.addInitScript(() => {
+      const w = window as unknown as { __csp: string[] }
+      w.__csp = []
+      document.addEventListener('securitypolicyviolation', (e) => w.__csp.push(`${e.violatedDirective} ${e.blockedURI}`))
+    })
+    await page.goto('/login')
+    await expect(page.getByRole('heading', { level: 1, name: 'n8builds admin' })).toBeVisible()
+    expect(await page.evaluate(() => (window as unknown as { __csp: string[] }).__csp)).toEqual([])
+  })
+
   test('every response is marked noindex and cannot be framed', async ({ request }) => {
     const response = await request.get('/login')
     expect(response.headers()['x-robots-tag']).toContain('noindex')

@@ -13,6 +13,12 @@ test.describe('pages', () => {
     test(`${path} renders its heading, context and no errors`, async ({ page }) => {
       const errors: string[] = []
       page.on('pageerror', (error) => errors.push(error.message))
+      // Any CSP violation (lib/security/csp.ts) counts as an error.
+      await page.addInitScript(() => {
+        document.addEventListener('securitypolicyviolation', (e) => {
+          throw new Error(`CSP blocked ${e.violatedDirective} ${e.blockedURI}`)
+        })
+      })
       const response = await page.goto(path)
       expect(response?.status()).toBe(200)
       await expect(page.getByRole('heading', { level: 1, name: heading, exact: true })).toBeVisible()
