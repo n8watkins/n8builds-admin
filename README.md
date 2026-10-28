@@ -43,6 +43,13 @@ npm run test:e2e:only             # rerun the specs without rebuilding
 Without `GITHUB_TOKEN` the GitHub pages show their "not connected" states; the specs pass either way.
 The test servers use ports 3834 and 3835.
 
+## CI
+
+`.github/workflows/ci.yml` runs on every pull request and every push to `main`: lint, types, unit tests, both builds and the Playwright specs, in one job inside Playwright's Docker image (its version read from `package-lock.json`), on Node 24.
+It uses no secrets, so the GitHub pages are tested in their "not connected" states.
+Docs-only changes skip it.
+"CI result" is the single summary check: require it if the repo ever gets branch protection (rulesets on a private repo need GitHub Pro).
+
 ## Lighthouse
 
 Lighthouse runs against a real production build with a test-only sign-in stub (`lib/auth/test-auth.ts`).
