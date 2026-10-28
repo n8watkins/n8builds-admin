@@ -63,17 +63,18 @@ Sets: `GA4_PROPERTY_ID`, `GOOGLE_SA_CLIENT_EMAIL`, `GOOGLE_SA_PRIVATE_KEY`.
 
 ## 4. Errors: Sentry read-only token
 
-Reads unresolved and new issues and error volume for the sites Sentry already watches.
+Reads unresolved and new issues and error volume for the sites Sentry already watches. With its DSN set, this dashboard reports its own server errors and the daily snapshot's check-ins too.
 
 1. In Sentry, User settings, Personal Tokens (User Auth Tokens), Create New Token.
 2. Scopes: only `org:read`, `project:read` and `event:read`; leave everything else at "No access".
 3. Set it as `SENTRY_AUTH_TOKEN`.
 4. Set your org slug (from the Sentry URL) as `SENTRY_ORG`.
-5. Set the project slugs to watch, comma-separated (the n8builds-web and portfolio projects), as `SENTRY_PROJECTS`.
+5. Set the project slugs to watch, comma-separated (`n8builds,portfolio,n8builds-admin`), as `SENTRY_PROJECTS`.
 6. Only if your org lives in Sentry's EU region, also set `SENTRY_API_BASE` to `https://de.sentry.io`.
+7. For this dashboard's own errors: in the `n8builds-admin` Sentry project, Settings, Client Keys (DSN), copy the DSN and set it as `SENTRY_DSN`. A missed or failed daily snapshot then emails you (cron monitor `admin-daily-snapshot`).
 
 Where: [Sentry auth tokens](https://sentry.io/settings/account/api/auth-tokens/).
-Sets: `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECTS`, `SENTRY_API_BASE` (optional).
+Sets: `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECTS`, `SENTRY_API_BASE` (optional), `SENTRY_DSN` (optional).
 
 ## 5. Counters and trends: a second Upstash database
 
@@ -129,6 +130,7 @@ Where: [n8builds-web Firewall](https://vercel.com/natkins23s-projects/n8builds-w
 | `SENTRY_ORG` | 4 | Vercel |
 | `SENTRY_PROJECTS` | 4 | Vercel |
 | `SENTRY_API_BASE` (optional) | 4 | Vercel, only for Sentry's EU region |
+| `SENTRY_DSN` (optional) | 4 | Vercel |
 | `ANALYTICS_REDIS_REST_URL` | 5 | Vercel |
 | `ANALYTICS_REDIS_REST_TOKEN` | 5 | Vercel |
 | `CRON_SECRET` | 5 | Vercel |

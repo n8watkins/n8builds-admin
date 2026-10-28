@@ -29,6 +29,7 @@
     "prepare": "git config core.hooksPath .githooks || true"
   },
   "dependencies": {
+    "@sentry/nextjs": "^10.76.2",
     "@upstash/redis": "^1.40.0",
     "jose": "^6.2.13",
     "next": "^16.4.3",

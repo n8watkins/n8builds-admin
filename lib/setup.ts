@@ -134,7 +134,7 @@ export const SETUP_ITEMS: SetupItem[] = [
   {
     id: 'sentry',
     title: 'Errors: Sentry read-only token',
-    why: 'Reads unresolved and new issues and error volume for the sites Sentry already watches.',
+    why: 'Reads unresolved and new issues and error volume for the sites Sentry already watches. With its DSN set, this dashboard reports its own server errors and the daily snapshot\'s check-ins too.',
     powers: [{ label: 'Errors', href: '/errors' }],
     check: 'env',
     vars: [
@@ -142,14 +142,16 @@ export const SETUP_ITEMS: SetupItem[] = [
       { name: 'SENTRY_ORG', where: 'Vercel' },
       { name: 'SENTRY_PROJECTS', where: 'Vercel' },
       { name: 'SENTRY_API_BASE', where: 'Vercel, only for Sentry\'s EU region', optional: true },
+      { name: 'SENTRY_DSN', where: 'Vercel', optional: true },
     ],
     steps: [
       'In Sentry, User settings, Personal Tokens (User Auth Tokens), Create New Token.',
       'Scopes: only `org:read`, `project:read` and `event:read`; leave everything else at "No access".',
       'Set it as `SENTRY_AUTH_TOKEN`.',
       'Set your org slug (from the Sentry URL) as `SENTRY_ORG`.',
-      'Set the project slugs to watch, comma-separated (the n8builds-web and portfolio projects), as `SENTRY_PROJECTS`.',
+      'Set the project slugs to watch, comma-separated (`n8builds,portfolio,n8builds-admin`), as `SENTRY_PROJECTS`.',
       'Only if your org lives in Sentry\'s EU region, also set `SENTRY_API_BASE` to `https://de.sentry.io`.',
+      'For this dashboard\'s own errors: in the `n8builds-admin` Sentry project, Settings, Client Keys (DSN), copy the DSN and set it as `SENTRY_DSN`. A missed or failed daily snapshot then emails you (cron monitor `admin-daily-snapshot`).',
     ],
     links: [{ label: 'Sentry auth tokens', href: 'https://sentry.io/settings/account/api/auth-tokens/' }],
   },
