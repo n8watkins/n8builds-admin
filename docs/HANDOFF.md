@@ -11,6 +11,7 @@ Setup details: `docs/SETUP.md`.
 ### State
 
 - Merged: release-kit 2 as a dev dependency (#1), the "Dino game" page with rounds, players, tries, scores, countries and high scores (#2), skipping Vercel builds for Dependabot and docs-only changes (#3).
+- Vercel deploys `main` only (2026-10-28, `git.deploymentEnabled` in `vercel.json`): other branches get no automatic preview, to stay under the 100 deployments a day the account shares. Run `vercel deploy` from a branch for one.
 - The Dino game page reads the analytics Redis that n8builds.dev's `POST /api/game` writes to; it shows "not connected" until that Redis exists.
 - The Security page shows live Dependabot counts for the build repos.
 - `GITHUB_TOKEN` (used for the GitHub data) expires on 2027-10-27; renew it before then.
