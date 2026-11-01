@@ -16,3 +16,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Write those subjects as patch notes, for users: what they can now do or what works better, not the file, library or test you touched. When the subject must stay technical, add a `Release-note: <plain sentence>` line to the body, or `Release-note: skip` for a change no user would notice.
 - Don't bump versions, edit CHANGELOG.md or create tags by hand: `npm run release` does all three.
 <!-- /release-kit -->
+
+## Bundler: Turbopack everywhere
+
+- Dev servers and tests run on Turbopack; never add `--webpack` to `next dev`, and never cap the heap (`NODE_OPTIONS=--max-old-space-size`): a capped heap makes Next restart and fail requests instead of saving memory.
+- Production builds (`npm run build`, `npm run build:e2e`, Vercel) run on Turbopack too (owner decision, 2026-11-01): nothing here needs webpack, and the postbuild bypass check (`scripts/check-no-dev-bypass.mjs`) scans Turbopack's output the same way.
+  Add `--webpack` back only for something that genuinely needs it, and write the reason here.
+- Measured on 2026-11-01 (all 13 pages visited): `next dev` on webpack held 2.4 GB, on Turbopack 1.8 GB, and each page compiled in about 0.3 s instead of 1 to 3 s.
+- A worktree needs its own `npm ci`: Turbopack refuses a `node_modules` symlinked from outside the project.
