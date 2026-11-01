@@ -17,7 +17,7 @@ export default async function Page() {
       <PageHeader
         area={area}
       />
-      <Panel id="referrals" title="Clicks to appturnity.com" description="Counted on n8builds.dev, by link placement.">
+      <Panel id="referrals" title="Clicks to techforpros.com" description="Counted on n8builds.dev, by link placement.">
         <Slot>
           <ReferralsPanel />
         </Slot>

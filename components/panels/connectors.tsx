@@ -124,13 +124,12 @@ export async function TrafficPanel() {
 }
 
 // ---------------------------------------------------------------------------
-// Referrals to Appturnity
+// Referrals to Tech for Pros
 
 const REFERRAL_PLAN = [
-  <>n8builds-web tags each Appturnity link with its placement (hero ad, &quot;Two ways&quot; card, footer, navbar) and adds <code className={code}>utm_source=n8builds</code>.</>,
-  <>A small click listener, loaded after the page, sends <code className={code}>navigator.sendBeacon(&apos;/api/ref&apos;)</code>, so the click is never slowed down.</>,
-  <>The route checks the placement against an allow-list and adds one to <code className={code}>ref:appturnity:&lt;date&gt;</code> in the analytics database. No IP, ID or cookie.</>,
-  'The same click also sends a Google Analytics event (appturnity_click) as a cross-check, and the utm tags show up in Appturnity\'s own analytics.',
+  <>n8builds-web&apos;s Tech for Pros buttons go through a counted short link, <code className={code}>n8builds.dev/techforpros?from=&lt;placement&gt;</code> (navbar, card).</>,
+  <>The route redirects at once to techforpros.com with <code className={code}>utm_source=n8builds.dev</code>, then adds one to <code className={code}>ref:techforpros:&lt;date&gt;</code> in the analytics database. No IP, ID or cookie.</>,
+  <>Old Appturnity links (<code className={code}>n8builds.dev/appturnity</code>) work the same way and count under <code className={code}>ref:appturnity</code>.</>,
 ]
 
 export async function ReferralsPanel() {
@@ -142,21 +141,33 @@ export async function ReferralsPanel() {
         needs={STORE_VARS}
         plan={REFERRAL_PLAN}
         setupId="upstash"
-        actions={<ExternalAction href="https://appturnity.com" describe="Open appturnity.com">
-            appturnity.com
+        actions={<ExternalAction href="https://techforpros.com" describe="Open techforpros.com">
+            techforpros.com
           </ExternalAction>}
       />
     )
   }
-  let days
+  let days, old
   try {
-    days = await readDailyHashTotals('ref:appturnity', 30)
+    ;[days, old] = await Promise.all([readDailyHashTotals('ref:techforpros', 30), readDailyHashTotals('ref:appturnity', 30)])
   } catch (error) {
     return <PanelError message={errorMessage(error)} />
   }
   const total = days.reduce((sum, day) => sum + day.total, 0)
+  const oldTotal = old.reduce((sum, day) => sum + day.total, 0)
+  // Old Appturnity links still redirect; their clicks show apart, under the trend.
+  const oldLine = oldTotal > 0 && (
+    <p className="text-sm text-slate-400">
+      Old Appturnity links: {formatNumber(oldTotal)} {oldTotal === 1 ? 'click' : 'clicks'} in 30 days
+    </p>
+  )
   if (total === 0) {
-    return <NotConnected title="Waiting for the counter" why="The analytics database is connected, but n8builds-web doesn't count Appturnity clicks yet." plan={REFERRAL_PLAN} />
+    return (
+      <div className="flex flex-col gap-6">
+        <NotConnected title="No clicks yet" why="n8builds.dev counts each click on its Tech for Pros buttons; none in the last 30 days." plan={REFERRAL_PLAN} />
+        {oldLine}
+      </div>
+    )
   }
   const byPlacement = new Map<string, number>()
   for (const day of days) for (const [field, value] of Object.entries(day.byField)) byPlacement.set(field, (byPlacement.get(field) ?? 0) + value)
@@ -167,8 +178,9 @@ export async function ReferralsPanel() {
         <Stat label="7 days" value={formatNumber(days.slice(-7).reduce((sum, day) => sum + day.total, 0))} />
         <Stat label="30 days" value={formatNumber(total)} />
       </div>
-      <Sparkline values={days.map((day) => day.total)} label="Appturnity clicks per day, last 30 days" />
+      <Sparkline values={days.map((day) => day.total)} label="Tech for Pros clicks per day, last 30 days" />
       <BarList rows={[...byPlacement.entries()].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value)} format={formatNumber} />
+      {oldLine}
     </div>
   )
 }
