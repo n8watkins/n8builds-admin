@@ -180,13 +180,14 @@ export const AREAS: Record<AreaId, Area> = {
   referrals: {
     id: 'referrals',
     href: '/referrals',
-    label: 'Referrals to Appturnity',
+    label: 'Referrals to Tech for Pros',
     icon: LuMousePointerClick,
     accent: accent.cyan,
-    summary: 'How many visitors n8builds.dev sends to appturnity.com.',
+    summary: 'How many visitors n8builds.dev sends to techforpros.com.',
     about: [
-      'n8builds.dev advertises Appturnity under the hero, in "Two ways to put me to work" and in the footer.',
+      'n8builds.dev links to Tech for Pros from its navbar button and its "Work with me" card.',
       'This counts the clicks on those links, by placement, so you can see which ones work.',
+      'Old links to Appturnity (n8builds.dev/appturnity) still redirect there, and are counted apart.',
       'Only daily totals are stored: no IPs, no IDs, no cookies.',
     ],
   },

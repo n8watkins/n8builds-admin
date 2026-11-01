@@ -9,7 +9,7 @@ export const PAGES = [
   { path: '/demos', heading: 'Live demos' },
   { path: '/errors', heading: 'Errors' },
   { path: '/traffic', heading: 'Website traffic' },
-  { path: '/referrals', heading: 'Referrals to Appturnity' },
+  { path: '/referrals', heading: 'Referrals to Tech for Pros' },
   { path: '/contact', heading: 'Contact messages' },
   { path: '/game', heading: 'Dino game' },
   { path: '/setup', heading: 'Setup' },

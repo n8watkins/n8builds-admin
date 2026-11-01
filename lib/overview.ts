@@ -105,11 +105,11 @@ async function traffic(): Promise<Summary> {
 
 async function referrals(): Promise<Summary> {
   if (!isStoreConnected()) return notConnected('referrals', 'Needs the analytics database and a counter on n8builds.dev')
-  const days = await readDailyHashTotals('ref:appturnity', 30)
+  const days = await readDailyHashTotals('ref:techforpros', 30)
   const total = days.reduce((sum, day) => sum + day.total, 0)
   return total === 0
-    ? { area: 'referrals', key: 'referrals', headline: 'No clicks yet', detail: 'The counter isn\'t on n8builds.dev yet', status: 'Waiting', tone: 'off' }
-    : { area: 'referrals', key: 'referrals', headline: formatNumber(total), detail: 'clicks to appturnity.com in 30 days', status: '30 days', tone: 'quiet' }
+    ? { area: 'referrals', key: 'referrals', headline: 'No clicks yet', detail: 'None to techforpros.com in 30 days', status: '30 days', tone: 'off' }
+    : { area: 'referrals', key: 'referrals', headline: formatNumber(total), detail: 'clicks to techforpros.com in 30 days', status: '30 days', tone: 'quiet' }
 }
 
 async function game(): Promise<Summary> {
