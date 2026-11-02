@@ -19,7 +19,11 @@ function Row({ row }: { row: WaitlistRow }) {
   return (
     <tr className="border-t border-white/[0.06] align-top">
       <td className="py-3 pr-4">
-        <p className="font-medium break-all text-slate-100">{row.email}</p>
+        {/* Breaks before the @ when the column is narrow, not mid-word. */}
+        <p className="font-medium [overflow-wrap:anywhere] text-slate-100">
+          {row.email.split('@')[0]}
+          <wbr />@{row.email.split('@').slice(1).join('@')}
+        </p>
         <p className="mt-0.5 text-[13px] text-slate-400">{day(row.createdAt)}</p>
       </td>
       <td className="py-3 pr-4">
@@ -34,7 +38,12 @@ function Row({ row }: { row: WaitlistRow }) {
       </td>
       <td className="py-3 pr-4 text-[13px] text-slate-400">
         {row.interest && <p>Interest: {name(row.interest)}</p>}
-        {row.referrer && <p className="break-all">From: {row.referrer}</p>}
+        {/* Without its scheme, a landing page's address fits the column instead of breaking mid-word. */}
+        {row.referrer && (
+          <p className="[overflow-wrap:anywhere]" title={row.referrer}>
+            From: {row.referrer.replace(/^https?:\/\//, '')}
+          </p>
+        )}
       </td>
       <td className="py-3 text-right">
         <form action={deleteSignup}>
@@ -72,7 +81,8 @@ async function List() {
   const counts = countByProject(rows)
   return (
     <div className="flex flex-col gap-8">
-      <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
+      {/* Five projects and the waiting count: six even tiles, two by two on phones, three to a row from sm. */}
+      <div className="grid grid-cols-2 gap-6 sm:grid-cols-3">
         {counts.map((c) => (
           <Stat key={c.slug} label={c.name} value={c.confirmed} hint="confirmed" />
         ))}
