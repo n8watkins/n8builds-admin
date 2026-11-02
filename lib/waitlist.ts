@@ -47,7 +47,23 @@ function redis(): Redis {
 
 const list = (value: string | undefined) => (value ? value.split(',').filter(Boolean) : [])
 
-export function toRow(id: string, fields: Record<string, string> | null): WaitlistRow | null {
+/**
+ * An entry hash as HGETALL returns it. With automatic deserialization off, the
+ * client hands back Redis's flat [field, value, ...] list instead of an object,
+ * and an empty list for a missing key.
+ */
+type Hash = Record<string, string> | string[] | null
+
+function fieldsOf(hash: Hash): Record<string, string> | null {
+  if (!Array.isArray(hash)) return hash
+  if (hash.length === 0) return null
+  const fields: Record<string, string> = {}
+  for (let i = 0; i + 1 < hash.length; i += 2) fields[hash[i]] = hash[i + 1]
+  return fields
+}
+
+export function toRow(id: string, hash: Hash): WaitlistRow | null {
+  const fields = fieldsOf(hash)
   if (!fields?.email) return null
   return {
     id,
@@ -70,7 +86,7 @@ export async function readWaitlist(): Promise<WaitlistRow[]> {
   if (ids.length === 0) return []
   const pipeline = redis().pipeline()
   for (const id of ids) pipeline.hgetall(`waitlist:entry:${id}`)
-  const results = (await pipeline.exec()) as (Record<string, string> | null)[]
+  const results = (await pipeline.exec()) as Hash[]
   const rows = ids.map((id, index) => toRow(id, results[index]))
   const gone = ids.filter((_, index) => !rows[index])
   if (gone.length > 0) await redis().zrem('waitlist:all', ...gone)
