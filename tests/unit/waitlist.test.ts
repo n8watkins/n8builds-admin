@@ -35,6 +35,7 @@ describe('waitlist rows', () => {
       ['relink', 1, ['a@example.com']],
       ['strollz', 1, ['a@example.com']],
       ['vibelog', 0, []],
+      ['asset-arsenal', 0, []],
     ])
   })
 
