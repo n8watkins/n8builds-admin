@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('server-only', () => ({}))
-const { countByProject, missingFromIndex, toRow } = await import('@/lib/waitlist')
+const { countByProject, missingFromIndex, projectName, toRow } = await import('@/lib/waitlist')
 
 const fields = (extra: Record<string, string> = {}) => ({
   email: 'a@example.com',
@@ -30,13 +30,25 @@ describe('waitlist rows', () => {
   })
 
   it('counts only confirmed sign-ups per project', () => {
-    const rows = [toRow('1', fields())!, toRow('2', fields({ email: 'b@example.com', projects: '', requested: 'vibelog', confirmedAt: '' }))!]
+    const rows = [
+      toRow('1', fields())!,
+      toRow('2', fields({ email: 'b@example.com', projects: '', requested: 'vibelog', confirmedAt: '' }))!,
+      toRow('3', fields({ email: 'c@example.com', projects: 'keysready', interest: 'keysready' }))!,
+    ]
     expect(countByProject(rows).map((c) => [c.slug, c.confirmed, c.emails])).toEqual([
       ['relink', 1, ['a@example.com']],
       ['strollz', 1, ['a@example.com']],
       ['vibelog', 0, []],
+      ['keysready', 1, ['c@example.com']],
       ['asset-arsenal', 0, []],
     ])
+  })
+
+  it('names every n8builds.dev project, KeysReady included, and shows an unknown slug as itself', () => {
+    expect(projectName('keysready')).toBe('KeysReady')
+    expect(projectName('asset-arsenal')).toBe('Asset Arsenal')
+    expect(projectName('vibelog')).toBe('VibeLog')
+    expect(projectName('someday')).toBe('someday')
   })
 
   it('puts back only entries missing from the index, scored by createdAt, and skips undated ones', () => {

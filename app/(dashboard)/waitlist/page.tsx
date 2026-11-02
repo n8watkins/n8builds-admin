@@ -3,7 +3,7 @@ import { PageHeader, Panel, NotConnected, PanelError, Stat, errorMessage } from 
 import { AREAS } from '@/lib/areas'
 import { requireOwner } from '@/lib/auth/owner'
 import { isStoreConnected } from '@/lib/store'
-import { PROJECTS, countByProject, readWaitlist, type WaitlistRow } from '@/lib/waitlist'
+import { countByProject, projectName as name, readWaitlist, type WaitlistRow } from '@/lib/waitlist'
 import { deleteSignup } from './actions'
 
 const area = AREAS.waitlist
@@ -12,7 +12,6 @@ export const metadata: Metadata = { title: area.label }
 // Always the live list: it holds people's addresses, and changes as they confirm or leave.
 export const dynamic = 'force-dynamic'
 
-const name = (slug: string) => PROJECTS.find((p) => p.slug === slug)?.name ?? slug
 const day = (iso: string) => (iso ? new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/Los_Angeles' }) : '')
 
 function Row({ row }: { row: WaitlistRow }) {
