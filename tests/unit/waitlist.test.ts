@@ -24,6 +24,11 @@ describe('waitlist rows', () => {
     expect(toRow('id1', null)).toBeNull()
   })
 
+  it("reads HGETALL's flat field list too (the client's form with deserialization off), and an empty one as gone", () => {
+    expect(toRow('id1', Object.entries(fields()).flat())).toEqual(toRow('id1', fields()))
+    expect(toRow('id1', [])).toBeNull()
+  })
+
   it('counts only confirmed sign-ups per project', () => {
     const rows = [toRow('1', fields())!, toRow('2', fields({ email: 'b@example.com', projects: '', requested: 'vibelog', confirmedAt: '' }))!]
     expect(countByProject(rows).map((c) => [c.slug, c.confirmed, c.emails])).toEqual([
