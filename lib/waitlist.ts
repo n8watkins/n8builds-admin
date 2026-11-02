@@ -17,6 +17,7 @@ export const PROJECTS = [
   { slug: 'relink', name: 'Relink' },
   { slug: 'strollz', name: 'Strollz' },
   { slug: 'vibelog', name: 'VibeLog' },
+  { slug: 'asset-arsenal', name: 'Asset Arsenal' },
 ] as const
 
 export type WaitlistRow = {
