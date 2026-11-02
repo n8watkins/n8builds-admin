@@ -1,7 +1,7 @@
 import Image, { type StaticImageData } from 'next/image'
 import n8builds from '@/assets/projects/n8builds-web.png'
 import openPing from '@/assets/projects/open-ping.svg'
-import piperTts from '@/assets/projects/piper-tts.png'
+import voicedock from '@/assets/projects/voicedock.png'
 import portfolioRank from '@/assets/projects/portfolio-rank.png'
 import scribe from '@/assets/projects/scribe.png'
 import solara from '@/assets/projects/solara.png'
@@ -14,7 +14,7 @@ const ICONS: Record<string, StaticImageData> = {
   'n8watkins/n8builds-web': n8builds,
   'n8watkins/dev-portfolio': n8builds,
   'n8watkins/open-ping': openPing,
-  'n8watkins/piper-tts': piperTts,
+  'n8watkins/voicedock': voicedock,
   'n8watkins/portfolio-rank': portfolioRank,
   'n8watkins/scribe': scribe,
   'n8watkins/solara': solara,
