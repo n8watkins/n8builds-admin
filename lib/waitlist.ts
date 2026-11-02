@@ -80,8 +80,53 @@ export function toRow(id: string, hash: Hash): WaitlistRow | null {
   }
 }
 
+/**
+ * The index entries to put back: every entry hash whose id is missing from
+ * waitlist:all, scored by its createdAt, as n8builds-web's store writes it.
+ * An entry with no usable createdAt is left out rather than guessed.
+ */
+export function missingFromIndex(
+  entries: { id: string; createdAt: string | null }[],
+  indexed: Set<string>
+): { score: number; member: string }[] {
+  return entries
+    .filter((entry) => !indexed.has(entry.id))
+    .map((entry) => ({ score: Date.parse(entry.createdAt ?? ''), member: entry.id }))
+    .filter((entry) => Number.isFinite(entry.score))
+}
+
+/**
+ * Puts back any entry missing from waitlist:all (an early version of the
+ * Waitlist page dropped every id it misread). Additive and idempotent, so it
+ * runs on every visit and also covers any future drift; unconfirmed entries
+ * still expire on their own TTL, and the read below then prunes their ids.
+ */
+export async function repairIndex(): Promise<number> {
+  const ids: string[] = []
+  let cursor = '0'
+  do {
+    const [next, keys] = await redis().scan(cursor, { match: 'waitlist:entry:*', count: 500 })
+    cursor = String(next)
+    for (const key of keys) ids.push(key.slice('waitlist:entry:'.length))
+  } while (cursor !== '0')
+  if (ids.length === 0) return 0
+  const indexed = new Set(await redis().zrange<string[]>('waitlist:all', 0, -1))
+  const missing = ids.filter((id) => !indexed.has(id))
+  if (missing.length === 0) return 0
+  const pipeline = redis().pipeline()
+  for (const id of missing) pipeline.hget(`waitlist:entry:${id}`, 'createdAt')
+  const created = (await pipeline.exec()) as (string | null)[]
+  const adds = missingFromIndex(missing.map((id, index) => ({ id, createdAt: created[index] })), indexed)
+  if (adds.length === 0) return 0
+  const [first, ...rest] = adds
+  await redis().zadd('waitlist:all', first, ...rest)
+  console.info(`waitlist: put ${adds.length} missing entr${adds.length === 1 ? 'y' : 'ies'} back in waitlist:all`)
+  return adds.length
+}
+
 /** Every entry, newest first; ids whose entry expired are dropped from the list. */
 export async function readWaitlist(): Promise<WaitlistRow[]> {
+  await repairIndex()
   const ids = await redis().zrange<string[]>('waitlist:all', 0, -1, { rev: true })
   if (ids.length === 0) return []
   const pipeline = redis().pipeline()

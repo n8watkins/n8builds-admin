@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('server-only', () => ({}))
-const { countByProject, toRow } = await import('@/lib/waitlist')
+const { countByProject, missingFromIndex, toRow } = await import('@/lib/waitlist')
 
 const fields = (extra: Record<string, string> = {}) => ({
   email: 'a@example.com',
@@ -36,5 +36,16 @@ describe('waitlist rows', () => {
       ['strollz', 1, ['a@example.com']],
       ['vibelog', 0, []],
     ])
+  })
+
+  it('puts back only entries missing from the index, scored by createdAt, and skips undated ones', () => {
+    const entries = [
+      { id: 'kept', createdAt: '2026-11-01T10:00:00.000Z' },
+      { id: 'lost', createdAt: '2026-11-01T11:00:00.000Z' },
+      { id: 'undated', createdAt: null },
+      { id: 'garbled', createdAt: 'yesterday' },
+    ]
+    expect(missingFromIndex(entries, new Set(['kept']))).toEqual([{ score: Date.parse('2026-11-01T11:00:00.000Z'), member: 'lost' }])
+    expect(missingFromIndex(entries.slice(0, 2), new Set(['kept', 'lost']))).toEqual([])
   })
 })
