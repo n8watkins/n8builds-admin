@@ -6,6 +6,7 @@ import {
   LuGamepad2,
   LuLayoutDashboard,
   LuListChecks,
+  LuListPlus,
   LuMail,
   LuMousePointerClick,
   LuRocket,
@@ -49,6 +50,7 @@ export type AreaId =
   | 'referrals'
   | 'game'
   | 'contact'
+  | 'waitlist'
   | 'setup'
 
 export type Area = {
@@ -217,6 +219,19 @@ export const AREAS: Record<AreaId, Area> = {
       'Only a daily number is stored, never the message.',
     ],
   },
+  waitlist: {
+    id: 'waitlist',
+    href: '/waitlist',
+    label: 'Waitlist',
+    icon: LuListPlus,
+    accent: accent.cyan,
+    summary: 'Who joined the waitlist on n8builds.dev/upcoming, and for which projects.',
+    about: [
+      'Sign-ups confirm by email (double opt-in); unconfirmed ones expire after 7 days.',
+      'Every waitlist email has a leave link that deletes the entry; Delete here does the same.',
+      'Stored in the analytics database under waitlist:* keys, written by n8builds-web.',
+    ],
+  },
   setup: {
     id: 'setup',
     href: '/setup',
@@ -233,6 +248,7 @@ export const NAV_GROUPS: { title?: string; areas: AreaId[] }[] = [
   { title: 'GitHub', areas: ['ci', 'minutes', 'repos', 'releases', 'security'] },
   { title: 'Sites', areas: ['demos', 'errors', 'traffic'] },
   { title: 'Counters', areas: ['referrals', 'contact', 'game'] },
+  { title: 'People', areas: ['waitlist'] },
   { areas: ['setup'] },
 ]
 

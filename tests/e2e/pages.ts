@@ -12,5 +12,6 @@ export const PAGES = [
   { path: '/referrals', heading: 'Referrals to Tech for Pros' },
   { path: '/contact', heading: 'Contact messages' },
   { path: '/game', heading: 'Dino game' },
+  { path: '/waitlist', heading: 'Waitlist' },
   { path: '/setup', heading: 'Setup' },
 ] as const
