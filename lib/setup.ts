@@ -88,7 +88,7 @@ export const SETUP_ITEMS: SetupItem[] = [
       'A fine-grained token covers one resource owner, so the personal repos and the Appturnity org each get their own token.',
       'Open GitHub, Settings, Developer settings, Personal access tokens, Fine-grained tokens, Generate new token.',
       'Token one: name `n8builds-admin read`, resource owner `n8watkins`, expiration 1 year (add a calendar reminder to renew it; the current one, made 2026-10-27, expires 2027-10-27).',
-      'Repository access: "Only select repositories": n8builds-web, dev-portfolio, portfolio-rank, open-ping, scribe, solara, piper-tts, tl-dw, tube-vault and n8builds-admin.',
+      'Repository access: "Only select repositories": n8builds-web, dev-portfolio, portfolio-rank, open-ping, scribe, solara, voicedock (was piper-tts), tl-dw, tube-vault and n8builds-admin.',
       'Repository permissions, all read-only: Actions, Administration (for views and clones), Contents, Deployments, Dependabot alerts, and Metadata (added automatically).',
       'Account permissions: Plan, read-only (for the personal Actions minutes report).',
       'Set it as `GITHUB_TOKEN`.',
