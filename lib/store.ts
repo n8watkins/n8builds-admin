@@ -4,13 +4,15 @@ import { Redis } from '@upstash/redis'
 /**
  * The analytics database: a second free Upstash database, separate from the
  * contact form's, so counters can never use up the form's quota and switch it
- * off. It stores only daily totals: no IPs, no visitor IDs, no cookies.
+ * off. Its counters are daily totals: no IPs, no visitor IDs, no cookies. The one
+ * exception is the waitlist, which keeps the addresses people chose to give.
  *
  * Keys (all dates are UTC `YYYY-MM-DD`):
  * - `snapshot:<date>`            JSON Snapshot, written once a day by /api/cron/snapshot, kept 400 days.
  * - `ref:appturnity:<date>`      hash: link placement -> clicks from n8builds.dev to appturnity.com.
  * - `contact:sent:<date>`        integer: contact messages delivered that day.
  * The last two are written by n8builds-web (not built yet; see the panels' plans).
+ * - `waitlist:*`                 the /upcoming waitlist's sign-ups (emails people gave, with consent), lib/waitlist.ts.
  */
 export function isStoreConnected(): boolean {
   return Boolean(process.env.ANALYTICS_REDIS_REST_URL && process.env.ANALYTICS_REDIS_REST_TOKEN)
