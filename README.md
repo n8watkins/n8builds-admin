@@ -9,6 +9,7 @@ An Overview that puts what needs attention first, a detail page per area (CI, Ac
 
 Setting up the accounts it reads from: the in-app Setup page, or [docs/SETUP.md](docs/SETUP.md).
 Both come from `lib/setup.ts`; after changing it, run `npm run setup:docs` (a unit test fails if the doc drifts).
+The owner's open steps (token rotations and renewals) are in [OWNER-TODO.md](OWNER-TODO.md).
 
 ## Local preview
 
