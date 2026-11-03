@@ -13,12 +13,17 @@ import { isStoreConnected } from '@/lib/store'
  * until this page reads the list and drops them.
  */
 
+/** In n8builds.dev's order (UPCOMING_SLUGS in n8builds-web's data/upcoming.ts); add a project there and here together. */
 export const PROJECTS = [
   { slug: 'relink', name: 'Relink' },
   { slug: 'strollz', name: 'Strollz' },
   { slug: 'vibelog', name: 'VibeLog' },
+  { slug: 'keysready', name: 'KeysReady' },
   { slug: 'asset-arsenal', name: 'Asset Arsenal' },
 ] as const
+
+/** A project's display name; an unknown slug shows as itself. */
+export const projectName = (slug: string) => PROJECTS.find((p) => p.slug === slug)?.name ?? slug
 
 export type WaitlistRow = {
   id: string
