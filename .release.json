@@ -1,5 +1,6 @@
 {
   "versionFiles": [],
   "workflows": "package",
-  "repository": "n8watkins/n8builds-admin"
+  "repository": "n8watkins/n8builds-admin",
+  "visibility": "private"
 }
