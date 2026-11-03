@@ -1,7 +1,7 @@
 import { LuBot } from 'react-icons/lu'
 import { formatDuration, formatNumber, formatPercent, timeAgo } from '@/lib/format'
 import { ga4Config, getTraffic } from '@/lib/ga4'
-import { VERCEL_TEAM } from '@/lib/repos'
+import { CLOUDFLARE_ACCOUNT } from '@/lib/repos'
 import { getSentrySummary, sentryConfig } from '@/lib/sentry'
 import { isStoreConnected, readDailyCounts, readDailyHashTotals, readSnapshots } from '@/lib/store'
 import { Sparkline } from '../Sparkline'
@@ -238,7 +238,7 @@ export async function TrendsPanel() {
         willShow={['Stars over 30 days', 'Minutes used by day', 'Change this week']}
         needs={[...STORE_VARS, 'CRON_SECRET']}
         plan={[
-          <>Vercel Cron calls <code className={code}>/api/cron/snapshot</code> daily at 06:15 UTC (already built, in vercel.json).</>,
+          <>A Cron Trigger on the Worker calls <code className={code}>/api/cron/snapshot</code> daily at 06:15 UTC (already built, in wrangler.jsonc).</>,
           <>It saves stars per repo and this month&apos;s minutes as <code className={code}>snapshot:&lt;date&gt;</code>, kept 400 days.</>,
         ]}
         setupId="upstash"
@@ -278,12 +278,12 @@ export function AiCrawlersCard() {
       <p className="flex items-start gap-3 text-[15px] leading-relaxed text-slate-300">
         <LuBot aria-hidden className="mt-0.5 size-5 shrink-0 text-blue-300" />
         <span>
-          Vercel&apos;s Firewall shows AI crawlers (GPTBot, ClaudeBot and others) once its <b className="font-semibold text-slate-100">AI Bots</b> ruleset is on in <b className="font-semibold text-slate-100">Log</b> mode, which records them without blocking. No counter of our own, so crawler visits cost nothing extra.
+          Cloudflare&apos;s <b className="font-semibold text-slate-100">AI Crawl Control</b> shows AI crawlers (GPTBot, ClaudeBot and others) for n8builds.dev, with each one left on <b className="font-semibold text-slate-100">Allow</b>, so they are recorded without being blocked. No counter of our own, so crawler visits cost nothing extra.
         </span>
       </p>
       <Actions>
-        <ExternalAction href={`https://vercel.com/${VERCEL_TEAM}/n8builds-web/firewall`} variant="primary" describe="Open the Vercel Firewall for n8builds-web">
-          Firewall
+        <ExternalAction href={`https://dash.cloudflare.com/${CLOUDFLARE_ACCOUNT}/n8builds.dev/ai`} variant="primary" describe="Open AI Crawl Control for n8builds.dev">
+          AI Crawl Control
         </ExternalAction>
       </Actions>
     </div>

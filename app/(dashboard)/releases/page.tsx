@@ -5,6 +5,7 @@ import { Slot } from '@/components/Slot'
 import { ExternalAction, PageHeader, Panel } from '@/components/ui'
 import { AREAS } from '@/lib/areas'
 import { requireOwner } from '@/lib/auth/owner'
+import { CLOUDFLARE_ACCOUNT } from '@/lib/repos'
 
 const area = AREAS.releases
 
@@ -17,7 +18,7 @@ export default async function Page() {
     <>
       <PageHeader
         area={area}
-        actions={<ExternalAction href="https://vercel.com/natkins23s-projects" describe="Open your Vercel projects">Vercel</ExternalAction>}
+        actions={<ExternalAction href={`https://dash.cloudflare.com/${CLOUDFLARE_ACCOUNT}/workers-and-pages`} describe="Open your Cloudflare Workers">Cloudflare</ExternalAction>}
       />
       <div className="space-y-6">
         <Panel id="projects" title="By project" description="Each build's latest release and what it changed, what has landed since, and its production deploy.">
@@ -31,7 +32,7 @@ export default async function Page() {
               <MonthActivity />
             </Slot>
           </Panel>
-          <Panel id="previews" title="Preview deploys" description="Vercel builds a preview of each pull request. Folded away unless one failed.">
+          <Panel id="previews" title="Preview deploys" description="The pull request previews GitHub records (Vercel's, for projects still on it). Folded away unless one failed.">
             <Slot rows={2}>
               <PreviewDeploys />
             </Slot>

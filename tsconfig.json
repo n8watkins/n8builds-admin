@@ -41,6 +41,10 @@
     ".next-e2e/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    ".open-next",
+    "worker",
+    "cloudflare-env.d.ts",
+    "tests/unit/worker-handlers.test.ts"
   ]
 }

@@ -86,10 +86,10 @@ test.describe('navigation', () => {
 
   test('the Setup page lists every item with a status', async ({ page }) => {
     await page.goto('/setup')
-    for (const id of ['sign-in', 'github', 'ga4', 'sentry', 'upstash', 'vercel', 'ai-bots']) {
+    for (const id of ['sign-in', 'github', 'ga4', 'sentry', 'upstash', 'cloudflare-deploys', 'hosting', 'ai-bots']) {
       await expect(page.locator(`li#${id} h2`)).toBeVisible()
     }
-    await expect(page.getByText(/of 6 done/)).toBeVisible()
+    await expect(page.getByText(/of 7 done/)).toBeVisible()
   })
 })
 

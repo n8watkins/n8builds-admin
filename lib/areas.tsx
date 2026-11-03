@@ -120,10 +120,10 @@ export const AREAS: Record<AreaId, Area> = {
     label: 'Releases and deploys',
     icon: LuRocket,
     accent: accent.teal,
-    summary: 'Tagged versions of each build and the newest Vercel deployments.',
+    summary: 'Tagged versions of each build and what is live on Cloudflare Workers.',
     about: [
       'A release is a tagged version of a build (the weekly release train cuts them for n8builds.dev).',
-      'A deploy is Vercel publishing a commit: a Preview for each pull request, Production for main.',
+      'A deploy is a new version going live on the project\'s Cloudflare Worker (or, for a project still on Vercel, Vercel publishing a commit).',
       'A failed deploy means a change never went live.',
     ],
   },
@@ -176,7 +176,7 @@ export const AREAS: Record<AreaId, Area> = {
     about: [
       'Google Analytics (one property for all of n8builds.dev) counts visitors and what they do.',
       'Top pages and referrers show which builds and posts bring people in, and from where.',
-      'AI crawlers aren\'t counted here; Vercel\'s Firewall logs them.',
+      'AI crawlers aren\'t counted here; Cloudflare\'s AI Crawl Control logs them.',
     ],
   },
   referrals: {

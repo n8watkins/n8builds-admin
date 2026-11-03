@@ -3,7 +3,7 @@ import nextCoreWebVitals from 'eslint-config-next/core-web-vitals'
 /** @type {import('eslint').Linter.Config[]} */
 const config = [
   {
-    ignores: ['.next/**', '.next-e2e/**', '.lighthouse/**', 'node_modules/**', 'out/**', 'playwright-report/**', 'test-results/**'],
+    ignores: ['.next/**', '.next-e2e/**', '.lighthouse/**', 'node_modules/**', 'out/**', 'playwright-report/**', 'test-results/**', '.open-next/**', '.wrangler/**', 'cloudflare-env.d.ts'],
   },
   ...nextCoreWebVitals,
   {

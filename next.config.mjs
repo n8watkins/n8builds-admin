@@ -1,9 +1,11 @@
 // An E2E build (`npm run build:e2e`) compiles in the test-only sign-in stub
 // (lib/auth/test-auth.ts) for Lighthouse and E2E runs. It can never be
-// deployed: Vercel builds refuse it, and it writes to .next-e2e, not .next.
+// deployed: Vercel builds and Cloudflare Worker builds refuse it (OpenNext
+// runs `next build` with ADMIN_WORKER_BUILD=1, open-next.config.ts; Workers
+// Builds sets WORKERS_CI), and it writes to .next-e2e, not .next.
 const e2eBuild = process.env.ADMIN_E2E_BUILD === '1'
-if (e2eBuild && process.env.VERCEL) {
-  throw new Error('ADMIN_E2E_BUILD is for local test builds only; never set it on Vercel.')
+if (e2eBuild && (process.env.VERCEL || process.env.ADMIN_WORKER_BUILD || process.env.WORKERS_CI)) {
+  throw new Error('ADMIN_E2E_BUILD is for local test builds only; never set it for a Vercel or Cloudflare build.')
 }
 
 /** @type {import('next').NextConfig} */

@@ -4,7 +4,7 @@
 
 Everything here is an account resource only the owner can create.
 The code is ready for each one: a page switches from "Not connected yet" to live data as soon as its variables exist.
-Secrets go straight into Vercel (Project, Settings, Environment Variables) or your local `.env.local`.
+Secrets go straight into the Cloudflare Worker (`npx wrangler secret put <NAME>` in this repo, which asks for the value) or your local `.env.local`.
 Never paste a secret, token or key into a chat, an issue, a commit or a doc.
 Agents only ever need the variable names, never the values.
 The dashboard's Setup page shows the same list with each item's live status.
@@ -15,9 +15,9 @@ Lets you sign in with GitHub; only your account (user ID 8055935) gets in.
 
 1. Open GitHub, Settings, Developer settings, OAuth Apps, New OAuth App.
 2. Name `n8builds admin`, homepage `https://admin.n8builds.dev`, redirect URI `https://admin.n8builds.dev/api/auth/callback`; wildcard matching and Device Flow off; "Expire user access tokens" can stay on.
-3. Register it, click "Generate a new client secret", and put the Client ID and secret in Vercel as `GITHUB_OAUTH_CLIENT_ID` and `GITHUB_OAUTH_CLIENT_SECRET`.
+3. Register it, click "Generate a new client secret", and put the Client ID and secret in the Worker as `GITHUB_OAUTH_CLIENT_ID` and `GITHUB_OAUTH_CLIENT_SECRET`.
 4. Optional, for real GitHub sign-in on your machine: add a second redirect URI `http://localhost:3831/api/auth/callback` to the same app and put the same two values in `.env.local`. Without it, the local preview runs on `ADMIN_DEV_BYPASS`.
-5. Make a session secret with `openssl rand -base64 48` and set it as `ADMIN_SESSION_SECRET` (a different value in Vercel and in `.env.local`).
+5. Make a session secret with `openssl rand -base64 48` and set it as `ADMIN_SESSION_SECRET` (a different value in the Worker and in `.env.local`).
 6. No scopes are requested: the app only learns which account signed in, and the dashboard revokes that token straight away.
 7. Rotating `ADMIN_SESSION_SECRET` signs every session out.
 
@@ -56,7 +56,7 @@ Reads visitors, countries, top pages, referrers, time on site and scroll depth f
 6. In Google Analytics, Admin, Property access management, add the service account's email as a Viewer.
 7. Copy the numeric Property ID from Admin, Property details (a number, not the `G-` measurement ID) and set it as `GA4_PROPERTY_ID`.
 8. From the JSON file, set `client_email` as `GOOGLE_SA_CLIENT_EMAIL` and `private_key` as `GOOGLE_SA_PRIVATE_KEY` (paste it as it is, `\n` sequences included).
-9. Delete the downloaded JSON file once both values are in Vercel.
+9. Delete the downloaded JSON file once both values are in the Worker.
 
 Where: [Enable the Analytics Data API](https://console.cloud.google.com/apis/library/analyticsdata.googleapis.com), [Service accounts](https://console.cloud.google.com/iam-admin/serviceaccounts), [Google Analytics admin](https://analytics.google.com/analytics/web/#/admin).
 Sets: `GA4_PROPERTY_ID`, `GOOGLE_SA_CLIENT_EMAIL`, `GOOGLE_SA_PRIVATE_KEY`.
@@ -81,57 +81,69 @@ Sets: `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECTS`, `SENTRY_API_BASE` (o
 Stores the daily snapshot (stars and minutes trends), the Appturnity referral and contact message counts, and the dino game stats. Set the two database variables on the n8builds-web project as well: it writes the counts.
 
 1. Keep it separate from the contact form's database, so counters can never use up the form's quota and switch it off.
-2. In Upstash, Create Database: name `n8builds-analytics`, type Redis, plan Free, region close to Vercel's (US East).
+2. In Upstash, Create Database: name `n8builds-analytics`, type Redis, plan Free, region US East.
 3. Copy the REST URL and REST token and set them as `ANALYTICS_REDIS_REST_URL` and `ANALYTICS_REDIS_REST_TOKEN`.
-4. Make a cron secret with `openssl rand -hex 32` and set it as `CRON_SECRET`.
-5. The daily snapshot (`/api/cron/snapshot`, 06:15 UTC, in `vercel.json`) starts on the first deploy, and trends fill in from the next day.
+4. Make a cron secret with `openssl rand -hex 32` and set it as `CRON_SECRET` (the Worker's Cron Trigger sends it to the snapshot route).
+5. The daily snapshot (`/api/cron/snapshot`, 06:15 UTC, a Cron Trigger in `wrangler.jsonc`) starts on the first deploy, and trends fill in from the next day.
 6. The referral and contact counters also need a small change in n8builds-web (an agent task, not yet done), using the same two Upstash variables there.
 
 Where: [Upstash console](https://console.upstash.com/redis).
 Sets: `ANALYTICS_REDIS_REST_URL`, `ANALYTICS_REDIS_REST_TOKEN`, `CRON_SECRET`.
 
-## 6. Hosting: Vercel project and admin.n8builds.dev
+## 6. Deploys: a read-only Cloudflare API token
+
+Shows each project's latest Cloudflare Workers deploy on the Releases page, the way it showed Vercel's.
+
+1. In Cloudflare, My Profile, API Tokens, Create Token, Create Custom Token.
+2. Name `n8builds-admin deploys read`; permissions: Account, Workers Scripts, Read; account resources: the owner's account only.
+3. Set it as `CLOUDFLARE_DEPLOYS_TOKEN` (a read token, separate from the deploy token GitHub Actions uses).
+
+Where: [Cloudflare API tokens](https://dash.cloudflare.com/profile/api-tokens).
+Sets: `CLOUDFLARE_DEPLOYS_TOKEN`.
+
+## 7. Hosting: the Cloudflare Worker and admin.n8builds.dev
 
 Puts the dashboard online at admin.n8builds.dev, behind GitHub sign-in.
 
-1. Create a private GitHub repo `n8watkins/n8builds-admin` and push this local repo's `main` to it.
-2. In Vercel (team natkins23s-projects), Add New, Project, import `n8builds-admin`; the Next.js preset and defaults are right.
-3. Before the first deploy, add every variable on this page to the Production environment.
-4. Never set `ADMIN_DEV_BYPASS` in Vercel; production builds ignore it, and the build fails if the bypass is ever compiled in.
-5. Settings, Domains: add `admin.n8builds.dev`, then add the CNAME record Vercel shows wherever n8builds.dev's DNS lives ("DNS only" if that is Cloudflare).
+1. The dashboard runs as the `n8builds-admin` Cloudflare Worker (DEPLOY.md), at `https://n8builds-admin.nathancwatkins23.workers.dev` until the domain moves.
+2. Before the first deploy, set every secret on this page with `npx wrangler secret put <NAME>`.
+3. Never set `ADMIN_DEV_BYPASS` or `ADMIN_TEST_AUTH` on the Worker; production builds compile both out, the build fails if either survives, and `APP_ENV=production` switches them off again at runtime.
+4. Add `CLOUDFLARE_API_TOKEN` (the "Edit Cloudflare Workers" template) as a GitHub Actions secret on the repo, so every push to `main` deploys.
+5. To move the domain, delete the `admin` CNAME to Vercel in Cloudflare DNS, then add `admin.n8builds.dev` as a custom domain of the Worker.
 6. Open `https://admin.n8builds.dev`, sign in with GitHub, and check that this page shows everything connected.
 7. Optional check: sign in with any other GitHub account and see "This dashboard is private to its owner".
 
-Where: [New Vercel project](https://vercel.com/new), [New GitHub repo](https://github.com/new).
+Where: [Workers and Pages](https://dash.cloudflare.com/b2c564cf83cb9184dd6d7cc4ff8b38bf/workers-and-pages), [n8builds.dev DNS](https://dash.cloudflare.com/b2c564cf83cb9184dd6d7cc4ff8b38bf/n8builds.dev/dns/records).
 
-## 7. AI crawlers: Vercel AI Bots ruleset in Log mode
+## 8. AI crawlers: Cloudflare AI Crawl Control
 
-Shows AI crawler traffic in Vercel's Firewall without blocking it or adding a counter of our own.
+Shows AI crawler traffic to n8builds.dev in Cloudflare without blocking it or adding a counter of our own.
 
-1. In Vercel, open the n8builds-web project, Firewall.
-2. Under Bot Management (managed rulesets), turn on "AI Bots" and set its action to Log, not Deny.
-3. Repeat for the portfolio project if you want its crawlers logged too.
+1. It counts requests that pass through Cloudflare's proxy, so it fills in once n8builds.dev is served by its Worker (or its DNS record is proxied).
+2. In Cloudflare, open the n8builds.dev zone, AI Crawl Control, and leave each crawler on Allow, so they are logged and not blocked.
+3. The portfolio (portfolio.n8builds.dev) is in the same zone, so its crawlers show up there too.
 
-Where: [n8builds-web Firewall](https://vercel.com/natkins23s-projects/n8builds-web/firewall).
+Where: [AI Crawl Control](https://dash.cloudflare.com/b2c564cf83cb9184dd6d7cc4ff8b38bf/n8builds.dev/ai).
 
 ## Environment variables
 
 | Variable | Step | Where |
 | --- | --- | --- |
-| `GITHUB_OAUTH_CLIENT_ID` | 1 | Vercel (and `.env.local` for real sign-in locally) |
-| `GITHUB_OAUTH_CLIENT_SECRET` | 1 | Vercel (and `.env.local` for real sign-in locally) |
-| `ADMIN_SESSION_SECRET` | 1 | Vercel and `.env.local` (different values) |
-| `GITHUB_TOKEN` | 2 | Vercel (locally: `GITHUB_TOKEN=$(gh auth token)` when starting the server) |
-| `GITHUB_ORG_TOKEN` (optional) | 2 | Vercel (optional locally: the gh token reads the org) |
-| `GA4_PROPERTY_ID` | 3 | Vercel |
-| `GOOGLE_SA_CLIENT_EMAIL` | 3 | Vercel |
-| `GOOGLE_SA_PRIVATE_KEY` | 3 | Vercel |
-| `SENTRY_AUTH_TOKEN` | 4 | Vercel |
-| `SENTRY_ORG` | 4 | Vercel |
-| `SENTRY_PROJECTS` | 4 | Vercel |
-| `SENTRY_API_BASE` (optional) | 4 | Vercel, only for Sentry's EU region |
-| `SENTRY_DSN` (optional) | 4 | Vercel |
-| `ANALYTICS_REDIS_REST_URL` | 5 | Vercel |
-| `ANALYTICS_REDIS_REST_TOKEN` | 5 | Vercel |
-| `CRON_SECRET` | 5 | Vercel |
+| `GITHUB_OAUTH_CLIENT_ID` | 1 | Worker secret (and `.env.local` for real sign-in locally) |
+| `GITHUB_OAUTH_CLIENT_SECRET` | 1 | Worker secret (and `.env.local` for real sign-in locally) |
+| `ADMIN_SESSION_SECRET` | 1 | Worker secret and `.env.local` (different values) |
+| `GITHUB_TOKEN` | 2 | Worker secret (locally: `GITHUB_TOKEN=$(gh auth token)` when starting the server) |
+| `GITHUB_ORG_TOKEN` (optional) | 2 | Worker secret (optional locally: the gh token reads the org) |
+| `GA4_PROPERTY_ID` | 3 | Worker secret |
+| `GOOGLE_SA_CLIENT_EMAIL` | 3 | Worker secret |
+| `GOOGLE_SA_PRIVATE_KEY` | 3 | Worker secret |
+| `SENTRY_AUTH_TOKEN` | 4 | Worker secret |
+| `SENTRY_ORG` | 4 | Worker secret |
+| `SENTRY_PROJECTS` | 4 | Worker secret |
+| `SENTRY_API_BASE` (optional) | 4 | Worker secret, only for Sentry's EU region |
+| `SENTRY_DSN` (optional) | 4 | Worker secret |
+| `ANALYTICS_REDIS_REST_URL` | 5 | Worker secret |
+| `ANALYTICS_REDIS_REST_TOKEN` | 5 | Worker secret |
+| `CRON_SECRET` | 5 | Worker secret |
+| `CLOUDFLARE_DEPLOYS_TOKEN` | 6 | Worker secret |
 | `ADMIN_DEV_BYPASS` | - | `.env.local` only, value `1`, for the local preview before sign-in is set up |

@@ -27,7 +27,7 @@ export default async function SetupPage() {
         area={AREAS.setup}
         lead={
           <>
-            Everything to create once so every page shows live data, with each item&apos;s status right now. Put secrets straight into Vercel or <code className="rounded bg-white/[0.07] px-1.5 py-0.5 font-mono text-[0.9em]">.env.local</code>, never into a chat. The same list lives in <code className="rounded bg-white/[0.07] px-1.5 py-0.5 font-mono text-[0.9em]">docs/SETUP.md</code>.
+            Everything to create once so every page shows live data, with each item&apos;s status right now. Put secrets straight into the Cloudflare Worker with <code className="rounded bg-white/[0.07] px-1.5 py-0.5 font-mono text-[0.9em]">npx wrangler secret put</code>, or into <code className="rounded bg-white/[0.07] px-1.5 py-0.5 font-mono text-[0.9em]">.env.local</code>, never into a chat. The same list lives in <code className="rounded bg-white/[0.07] px-1.5 py-0.5 font-mono text-[0.9em]">docs/SETUP.md</code>.
           </>
         }
       />
@@ -35,7 +35,7 @@ export default async function SetupPage() {
       <div className={cx(CARD, 'mb-10 p-6 sm:p-7')}>
         <p className="text-[17px] font-semibold text-slate-50">
           {done} of {checkable.length} done
-          {manual > 0 && <span className="font-normal text-slate-400">, plus {manual} to confirm in Vercel</span>}
+          {manual > 0 && <span className="font-normal text-slate-400">, plus {manual} to confirm in Cloudflare</span>}
         </p>
         <ol className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-x-6 gap-y-1 lg:grid-cols-2">
           {items.map(({ item, status }, index) => (

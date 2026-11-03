@@ -23,7 +23,7 @@ export default async function Page() {
             <TrafficPanel />
           </Slot>
         </Panel>
-        <Panel id="crawlers" title="AI crawlers" description="Bots that read the site for AI models, logged by Vercel.">
+        <Panel id="crawlers" title="AI crawlers" description="Bots that read the site for AI models, logged by Cloudflare.">
           <AiCrawlersCard />
         </Panel>
       </div>

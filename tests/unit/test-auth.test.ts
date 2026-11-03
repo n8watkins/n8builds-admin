@@ -7,6 +7,7 @@ const source = readFileSync(fileURLToPath(new URL('../../lib/auth/test-auth.ts',
 
 function env(vars: Record<string, string | undefined>) {
   vi.stubEnv('VERCEL', undefined)
+  vi.stubEnv('APP_ENV', undefined)
   vi.stubEnv('ADMIN_E2E_BUILD', undefined)
   vi.stubEnv('ADMIN_TEST_AUTH', undefined)
   for (const [name, value] of Object.entries(vars)) vi.stubEnv(name, value)
@@ -37,6 +38,13 @@ describe('isTestAuthEnabled', () => {
     expect(isTestAuthEnabled()).toBe(false)
   })
 
+  it('is off on Cloudflare Workers (APP_ENV set by wrangler.jsonc), even in an E2E build', () => {
+    for (const appEnv of ['production', 'preview', 'anything']) {
+      env({ ADMIN_E2E_BUILD: '1', ADMIN_TEST_AUTH: '1', APP_ENV: appEnv })
+      expect(isTestAuthEnabled()).toBe(false)
+    }
+  })
+
   it('needs exactly "1"', () => {
     for (const value of ['true', 'yes', '0', '', undefined]) {
       env({ ADMIN_E2E_BUILD: '1', ADMIN_TEST_AUTH: value })
@@ -62,6 +70,6 @@ describe('isTestAuthEnabled', () => {
     const config = readFileSync(fileURLToPath(new URL('../../next.config.mjs', import.meta.url)), 'utf8')
     expect(config).toMatch(/env: \{ ADMIN_E2E_BUILD: e2eBuild \? '1' : '' \}/)
     expect(config).toMatch(/distDir: e2eBuild \? '\.next-e2e' : '\.next'/)
-    expect(config).toMatch(/if \(e2eBuild && process\.env\.VERCEL\) \{\s*throw/)
+    expect(config).toMatch(/if \(e2eBuild && \(process\.env\.VERCEL \|\| process\.env\.ADMIN_WORKER_BUILD \|\| process\.env\.WORKERS_CI\)\) \{\s*throw/)
   })
 })

@@ -1,6 +1,7 @@
 import { timeAgo } from '@/lib/format'
-import { getCommitsSince, getLatestRelease, getPreviewDeploys, getProductionDeploy, isGitHubConnected } from '@/lib/github'
-import { TRACKED_REPOS, shortName, vercelProjectUrl } from '@/lib/repos'
+import { getWorkerDeploy, isCloudflareConnected, type WorkerDeploy } from '@/lib/cloudflare'
+import { getCommitsSince, getLatestRelease, getPreviewDeploys, getProductionDeploy, isGitHubConnected, type Deployment } from '@/lib/github'
+import { TRACKED_REPOS, shortName, vercelProjectUrl, type TrackedRepo } from '@/lib/repos'
 import { ProjectIcon } from '../ProjectIcon'
 import { Dot, OutLink, StatusPill, type Tone } from '../ui'
 import { GitHubNotConnected } from './github'
@@ -19,23 +20,82 @@ function deployState(state: string | null): { label: string; tone: Tone } {
   return DEPLOY_STATE[state ?? ''] ?? { label: state ?? 'Unknown', tone: 'idle' }
 }
 
+const TRIGGER: Record<string, string> = {
+  deployment: 'Code deploy',
+  secret: 'Secret changed',
+  rollback: 'Rollback',
+  version_upload: 'Code deploy',
+}
+
+/**
+ * Where a project's production deploy comes from: its Cloudflare Worker when it
+ * has one (lib/cloudflare.ts), otherwise the Production deployment Vercel
+ * records on GitHub.
+ */
+type Production =
+  | { kind: 'worker'; deploy: WorkerDeploy | null; connected: boolean }
+  | { kind: 'github'; deploy: Deployment | null }
+
+async function productionOf(tracked: TrackedRepo): Promise<Production> {
+  if (tracked.worker) {
+    if (!isCloudflareConnected()) return { kind: 'worker', deploy: null, connected: false }
+    const result = await getWorkerDeploy(tracked.worker)
+    return { kind: 'worker', deploy: result.ok ? result.data : null, connected: true }
+  }
+  const result = await getProductionDeploy(tracked.repo)
+  return { kind: 'github', deploy: result.ok ? result.data : null }
+}
+
+function WorkerProduction({ tracked, deploy, connected }: { tracked: TrackedRepo; deploy: WorkerDeploy | null; connected: boolean }) {
+  if (!connected) {
+    return (
+      <p className="mt-1.5 text-[14px] text-slate-400">
+        On Cloudflare Workers; its deploys show once <code className="font-mono text-slate-300">CLOUDFLARE_DEPLOYS_TOKEN</code> is set. <OutLink href={tracked.site}>Site</OutLink>
+      </p>
+    )
+  }
+  if (!deploy) {
+    return (
+      <p className="mt-1.5 text-[14px] text-slate-400">
+        No Cloudflare deploy yet. <OutLink href={tracked.site}>Site</OutLink>
+      </p>
+    )
+  }
+  return (
+    <>
+      <p className="mt-1.5 flex flex-wrap items-center gap-2">
+        <StatusPill tone="good">Live</StatusPill>
+        <span className="text-[14px] text-slate-300">{timeAgo(deploy.createdAt)}</span>
+        {deploy.trigger && <span className="text-[14px] text-slate-400">{TRIGGER[deploy.trigger] ?? deploy.trigger}</span>}
+      </p>
+      {deploy.message && <p className="mt-2 truncate text-[14px] text-slate-300">{deploy.message}</p>}
+      <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[14px]">
+        <OutLink href={tracked.site}>Site</OutLink>
+        <OutLink href={deploy.url}>Cloudflare</OutLink>
+        {deploy.version && <span className="font-mono text-slate-400">{deploy.version}</span>}
+      </p>
+    </>
+  )
+}
+
 /** One row per project: its latest release, what has landed since, and its production deploy. */
 export async function ProjectReleases() {
   if (!isGitHubConnected()) return <GitHubNotConnected />
   const rows = await Promise.all(
     TRACKED_REPOS.map(async (tracked) => {
-      const [release, production] = await Promise.all([getLatestRelease(tracked.repo), getProductionDeploy(tracked.repo)])
+      const [release, production] = await Promise.all([getLatestRelease(tracked.repo), productionOf(tracked)])
       const latest = release.ok ? release.data : null
       const since = latest ? await getCommitsSince(tracked.repo, latest.tag) : null
-      return { tracked, latest, since: since?.ok ? since.data : null, production: production.ok ? production.data : null }
+      return { tracked, latest, since: since?.ok ? since.data : null, production }
     }),
   )
   // Newest release first; projects without releases last.
   rows.sort((a, b) => (b.latest?.publishedAt ?? '').localeCompare(a.latest?.publishedAt ?? ''))
   return (
     <ul className="-my-2 divide-y divide-white/[0.06]">
-      {rows.map(({ tracked, latest, since, production }) => {
+      {rows.map(({ tracked, latest, since, production: source }) => {
         const project = vercelProjectUrl(tracked.repo)
+        const production = source.kind === 'github' ? source.deploy : null
         const state = production ? deployState(production.state) : null
         return (
           <li key={tracked.repo} className="grid gap-4 py-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)_minmax(0,1.1fr)] lg:gap-8">
@@ -78,7 +138,9 @@ export async function ProjectReleases() {
             </div>
             <div className="min-w-0">
               <p className="text-[13px] font-medium text-slate-400">Production</p>
-              {production && state ? (
+              {source.kind === 'worker' ? (
+                <WorkerProduction tracked={tracked} deploy={source.deploy} connected={source.connected} />
+              ) : production && state ? (
                 <>
                   <p className="mt-1.5 flex flex-wrap items-center gap-2">
                     <StatusPill tone={state.tone}>{state.label}</StatusPill>
@@ -92,7 +154,7 @@ export async function ProjectReleases() {
                 </>
               ) : (
                 <p className="mt-1.5 text-[14px] text-slate-400">
-                  Not deployed through Vercel. <OutLink href={tracked.site}>Site</OutLink>
+                  No deploys recorded. <OutLink href={tracked.site}>Site</OutLink>
                 </p>
               )}
             </div>

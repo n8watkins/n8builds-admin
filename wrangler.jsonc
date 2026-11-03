@@ -1,0 +1,39 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // The dashboard as a Cloudflare Worker, built by OpenNext (see DEPLOY.md).
+  // worker/index.ts wraps the generated .open-next/worker.js.
+  "name": "n8builds-admin",
+  "account_id": "b2c564cf83cb9184dd6d7cc4ff8b38bf",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-11-01",
+  // nodejs_compat is required by OpenNext; global_fetch_strictly_public keeps
+  // the server's own fetches (GitHub, GA4, Sentry, Upstash) on the public internet.
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  // next/image (the project icons) resizes through Cloudflare Images, as it did on Vercel.
+  "images": { "binding": "IMAGES" },
+  // Next's data cache (the five-minute upstream reads, lib/cache.ts) lives in R2.
+  "r2_buckets": [{ "binding": "NEXT_INC_CACHE_R2_BUCKET", "bucket_name": "n8builds-admin-opennext-cache" }],
+  // The daily snapshot (worker/handlers.ts), at the time the Vercel cron ran.
+  "triggers": { "crons": ["15 6 * * *"] },
+  "vars": {
+    // Replaces VERCEL_ENV. Any value also switches the sign-in bypass and the
+    // test sign-in off at runtime (lib/auth), on top of production builds
+    // compiling both out. Never add ADMIN_DEV_BYPASS, ADMIN_TEST_AUTH or
+    // ADMIN_E2E_BUILD here (tests/unit/worker-config.test.ts).
+    "APP_ENV": "production"
+  },
+  // Secrets (npx wrangler secret put <NAME>, see DEPLOY.md and docs/SETUP.md):
+  // GITHUB_OAUTH_CLIENT_ID, GITHUB_OAUTH_CLIENT_SECRET, ADMIN_SESSION_SECRET,
+  // GITHUB_TOKEN, GITHUB_ORG_TOKEN, GA4_PROPERTY_ID, GOOGLE_SA_CLIENT_EMAIL,
+  // GOOGLE_SA_PRIVATE_KEY, SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECTS,
+  // SENTRY_DSN, ANALYTICS_REDIS_REST_URL, ANALYTICS_REDIS_REST_TOKEN,
+  // CRON_SECRET, CLOUDFLARE_DEPLOYS_TOKEN. Each page shows "not connected"
+  // until its secrets exist.
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+  "workers_dev": true,
+  "preview_urls": false
+}
