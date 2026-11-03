@@ -49,6 +49,15 @@ Log in once with `npx wrangler login` (check with `npx wrangler whoami`), then r
 To check the Worker locally first, run `npm run preview` and open http://localhost:8787.
 To run the cron locally, run `npx wrangler dev --test-scheduled` after a build and open http://localhost:8787/__scheduled.
 
+## Reading the logs
+
+Workers Logs keeps every request (`observability` in `wrangler.jsonc`, `head_sampling_rate: 1`).
+In the Cloudflare dashboard, open Workers & Pages, then the `n8builds-admin` Worker, then Logs.
+To stream them live, run `npx wrangler tail n8builds-admin --format pretty`.
+`--search` matches log messages only, not request URLs, so use `--status error` or no filter to see requests.
+Failures log one JSON line with `event`, `reason`, `route` and `status`: sign-in failures as `auth_callback_failed` (`missing_cookie`, `invalid_cookie`, `state_mismatch`, `missing_code`, `token_exchange_failed` with GitHub's error code, `profile_fetch_failed`, `not_owner`), and errors thrown in pages, route handlers or the proxy as `unhandled_exception` with the route (`instrumentation.ts`).
+They never carry secrets, tokens, OAuth codes or state values, cookies, emails or other personal data.
+
 ## Testing a deployment
 
 `E2E_REMOTE_URL=https://n8builds-admin.nathancwatkins23.workers.dev npx playwright test` runs the gate specs against the deployed Worker: every page and API route locked without a session, forged cookies refused, the CSP and `noindex` headers in place.

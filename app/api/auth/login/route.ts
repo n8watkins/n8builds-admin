@@ -3,12 +3,14 @@ import { OAUTH_COOKIE, OAUTH_TTL_SECONDS } from '@/lib/auth/config'
 import { setHostCookie } from '@/lib/auth/cookies'
 import { callbackUrl } from '@/lib/auth/github-oauth'
 import { createOAuthStateToken, isAuthConfigured, pkceChallenge, randomToken } from '@/lib/auth/tokens'
+import { logError } from '@/lib/log'
 
 export const dynamic = 'force-dynamic'
 
 /** Starts GitHub sign-in: a fresh state and PKCE verifier, remembered in a signed short-lived cookie. */
 export async function GET(request: NextRequest) {
   if (!isAuthConfigured()) {
+    logError({ event: 'auth_login_failed', reason: 'not_configured', route: '/api/auth/login', status: 303 })
     return NextResponse.redirect(new URL('/login?error=not-configured', request.url), 303)
   }
   const state = randomToken()

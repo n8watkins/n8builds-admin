@@ -1,12 +1,21 @@
 import 'server-only'
+import { oauthErrorCode } from '@/lib/log'
 
 /** Where GitHub sends the owner back; must match a callback URL on the OAuth App. */
 export function callbackUrl(origin: string): string {
   return `${origin}/api/auth/callback`
 }
 
-/** Swaps the one-time code (plus the PKCE verifier) for a short-lived user token. */
-export async function exchangeCode(code: string, verifier: string, redirectUri: string): Promise<string | null> {
+export type CodeExchange =
+  | { token: string }
+  | { token: null; status: number; error?: string }
+
+/**
+ * Swaps the one-time code (plus the PKCE verifier) for a short-lived user token.
+ * On failure it returns GitHub's HTTP status and short error code (such as
+ * `bad_verification_code`), never the token or the error description.
+ */
+export async function exchangeCode(code: string, verifier: string, redirectUri: string): Promise<CodeExchange> {
   const response = await fetch('https://github.com/login/oauth/access_token', {
     method: 'POST',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
@@ -19,21 +28,24 @@ export async function exchangeCode(code: string, verifier: string, redirectUri: 
     }),
     cache: 'no-store',
   })
-  if (!response.ok) return null
-  const body = (await response.json()) as { access_token?: unknown }
-  return typeof body.access_token === 'string' ? body.access_token : null
+  if (!response.ok) return { token: null, status: response.status }
+  const body = (await response.json()) as { access_token?: unknown; error?: unknown }
+  if (typeof body.access_token === 'string') return { token: body.access_token }
+  return { token: null, status: response.status, error: oauthErrorCode(body.error) }
 }
 
-/** The account behind a user token. */
-export async function fetchGitHubUser(token: string): Promise<{ id: number; login: string } | null> {
+/** The account behind a user token, or the HTTP status GitHub answered with. */
+export async function fetchGitHubUser(
+  token: string,
+): Promise<{ user: { id: number; login: string } } | { user: null; status: number }> {
   const response = await fetch('https://api.github.com/user', {
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' },
     cache: 'no-store',
   })
-  if (!response.ok) return null
+  if (!response.ok) return { user: null, status: response.status }
   const body = (await response.json()) as { id?: unknown; login?: unknown }
-  if (typeof body.id !== 'number' || typeof body.login !== 'string') return null
-  return { id: body.id, login: body.login }
+  if (typeof body.id !== 'number' || typeof body.login !== 'string') return { user: null, status: response.status }
+  return { user: { id: body.id, login: body.login } }
 }
 
 /**
