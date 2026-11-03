@@ -1,10 +1,12 @@
 # release-kit: merge update pull requests once CI passes (docs/AUTO_MERGE.md in
-# release-kit). apply writes it in a private repo, which on GitHub Free can't
-# require checks: the merge-when-green fallback merges a release-kit update or a
-# Dependabot patch or minor update once every check on it has passed, and a
-# major update waits for a person. workflow_run lists every workflow that runs
-# on pull requests, so the one that finishes last still triggers a look; rerun
-# npx release-kit apply . after adding one.
+# release-kit). A release-kit update or a Dependabot patch or minor update
+# merges on its own, and a major update waits for a person. Where the branch
+# requires checks, GitHub's auto-merge merges it once they pass (allow auto-merge
+# on the repo: npx release-kit protect does); where it can't (a private repo on
+# GitHub Free), the merge-when-green fallback merges it once every check on it
+# has passed. workflow_run lists every workflow that runs on pull requests, so
+# the one that finishes last still triggers a look; rerun npx release-kit
+# apply . after adding one. "autoMerge": false in .release.json turns it off.
 name: Auto-merge
 
 on:
@@ -26,4 +28,6 @@ jobs:
     permissions:
       contents: write # merge the pull request
       pull-requests: write # turn on auto-merge
-    uses: n8watkins/release-kit/.github/workflows/auto-merge.yml@v2.4.0
+      checks: read # merge when green: read the checks on the pull request
+      statuses: read
+    uses: n8watkins/release-kit/.github/workflows/auto-merge.yml@v2.5.2
