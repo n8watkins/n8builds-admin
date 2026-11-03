@@ -8,6 +8,8 @@
 //   Cron sent, so the snapshot code and its tests stay as they are.
 
 /** The bindings (cloudflare-env.d.ts) plus the secrets this file reads, which may be unset. */
+import { errorSummary, logError, pathOf } from '../lib/log'
+
 export type WorkerEnv = CloudflareEnv & { CRON_SECRET?: string; SENTRY_DSN?: string }
 
 export type FetchHandler = {
@@ -33,8 +35,22 @@ export async function runSnapshot(app: FetchHandler, env: WorkerEnv, ctx: Execut
 
 export function createWorker(app: FetchHandler) {
   return {
-    fetch(request, env, ctx) {
-      return app.fetch(request, env, ctx)
+    async fetch(request, env, ctx) {
+      try {
+        return await app.fetch(request, env, ctx)
+      } catch (err) {
+        // Next handles its own errors (instrumentation.ts logs them); this is
+        // for a throw that escapes OpenNext itself.
+        logError({
+          event: 'unhandled_exception',
+          reason: 'worker_fetch_threw',
+          route: pathOf(request.url),
+          method: request.method,
+          status: 500,
+          error: errorSummary(err),
+        })
+        throw err
+      }
     },
 
     async scheduled(controller, env, ctx) {
