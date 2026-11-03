@@ -6,6 +6,7 @@ An Overview that puts what needs attention first, a detail page per area (CI, Ac
 - Next.js 16 App Router, TypeScript, Tailwind 4, server components only; each panel fetches on the server (cached 5 minutes) in its own Suspense and error boundary.
 - Sign-in is hand-rolled GitHub OAuth (state and PKCE) that admits only the owner's GitHub user ID, with a signed, HttpOnly `__Host-` cookie that lasts 7 days, checked in the proxy, the layout and every route handler.
 - Never indexed, no analytics on the admin itself.
+- Runs on Cloudflare Workers through OpenNext, with the daily snapshot as a Cron Trigger: see [DEPLOY.md](DEPLOY.md).
 
 Setting up the accounts it reads from: the in-app Setup page, or [docs/SETUP.md](docs/SETUP.md).
 Both come from `lib/setup.ts`; after changing it, run `npm run setup:docs` (a unit test fails if the doc drifts).
@@ -32,7 +33,7 @@ npm run lint && npm run type-check && npm test
 
 Playwright runs against two production servers, so it tests what actually ships:
 
-- **gate**: the normal build (`.next`, what Vercel deploys), started with `ADMIN_DEV_BYPASS=1` and `ADMIN_TEST_AUTH=1` to prove both are ignored. Every page redirects to `/login`, API routes answer 401, forged cookies are refused, responses are `noindex`.
+- **gate**: the normal build (`.next`, what the Worker is built from), started with `ADMIN_DEV_BYPASS=1` and `ADMIN_TEST_AUTH=1` to prove both are ignored. Every page redirects to `/login`, API routes answer 401, forged cookies are refused, responses are `noindex`.
 - **app**: the E2E build (`.next-e2e`) with the test-only sign-in stub. Every page renders with no errors and no axe (WCAG 2.1 AA) violations, the sidebar and phone menu navigate, links to other sites open in a new tab and say so, and no page scrolls sideways at 375 or 320 pixels.
 
 ```sh
@@ -54,7 +55,7 @@ Docs-only changes skip it.
 ## Lighthouse
 
 Lighthouse runs against a real production build with a test-only sign-in stub (`lib/auth/test-auth.ts`).
-That stub exists only in an E2E build (`ADMIN_E2E_BUILD=1`, written to `.next-e2e`), which Vercel refuses to build, and the postbuild check fails a normal build if it ever survives.
+That stub exists only in an E2E build (`ADMIN_E2E_BUILD=1`, written to `.next-e2e`), which Vercel and the Cloudflare Worker build refuse, and the postbuild checks fail a normal build or the Worker bundle if it ever survives (DEPLOY.md).
 
 ```sh
 npm run build:e2e

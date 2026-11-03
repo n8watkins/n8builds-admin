@@ -4,14 +4,15 @@
 
 ### What this is
 
-The owner's private dashboard at https://admin.n8builds.dev (Next.js on Vercel, GitHub sign-in).
+The owner's private dashboard at https://admin.n8builds.dev (Next.js, GitHub sign-in).
+It runs on Cloudflare Workers (DEPLOY.md) at https://n8builds-admin.nathancwatkins23.workers.dev; admin.n8builds.dev still points at Vercel until the owner moves the domain and sets the Worker's secrets (OWNER-TODO.md).
 It isn't listed publicly.
 Setup details: `docs/SETUP.md`.
 
 ### State
 
 - Merged: release-kit 2 as a dev dependency (#1), the "Dino game" page with rounds, players, tries, scores, countries and high scores (#2), skipping Vercel builds for Dependabot and docs-only changes (#3).
-- Vercel deploys `main` only (2026-10-28, `git.deploymentEnabled` in `vercel.json`): other branches get no automatic preview, to stay under the 100 deployments a day the account shares. Run `vercel deploy` from a branch for one.
+- 2026-11-03: moved to Cloudflare Workers with OpenNext: the daily snapshot is a Cron Trigger, the data cache is in R2, `APP_ENV` replaces `VERCEL_ENV`, and the Releases page reads Worker deploys from the Cloudflare API. Vercel still deploys `main` (`vercel.json`) until the owner deletes the project.
 - The Dino game page reads the analytics Redis that n8builds.dev's `POST /api/game` writes to; it shows "not connected" until that Redis exists.
 - The Security page shows live Dependabot counts for the build repos.
 - `GITHUB_TOKEN` (used for the GitHub data) expires on 2027-10-27, and `GITHUB_ORG_TOKEN` (`n8builds-admin billing`: Appturnity, Administration read-only, for the Actions minutes card) on 2027-10-28; renew both before then.

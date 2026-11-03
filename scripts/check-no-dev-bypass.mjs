@@ -3,14 +3,18 @@
 // - the dev preview's ADMIN_DEV_BYPASS, in every production build;
 // - the test stub's ADMIN_TEST_AUTH, in every build except a local E2E build
 //   (ADMIN_E2E_BUILD=1, written to .next-e2e).
+// With --worker it checks the Cloudflare Worker bundle instead (.open-next,
+// what `opennextjs-cloudflare deploy` uploads), for both reads: no E2E build
+// is ever allowed there (npm run build:worker and npm run deploy run it).
 // Both checks in lib/auth compile to `return false` in a normal production
 // build, so the reads must be gone; if one is ever there, the bypass could
 // reach production.
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
-const e2e = process.env.ADMIN_E2E_BUILD === '1'
-const dist = e2e ? '.next-e2e' : '.next'
+const worker = process.argv.includes('--worker')
+const e2e = !worker && process.env.ADMIN_E2E_BUILD === '1'
+const dist = worker ? '.open-next' : e2e ? '.next-e2e' : '.next'
 const reads = (name) => new RegExp(`env\\s*(?:\\.\\s*${name}|\\[\\s*["'\`]${name})`)
 const forbidden = [['ADMIN_DEV_BYPASS', reads('ADMIN_DEV_BYPASS')], ...(e2e ? [] : [['ADMIN_TEST_AUTH', reads('ADMIN_TEST_AUTH')]])]
 const offenders = []
@@ -26,11 +30,16 @@ function walk(dir) {
   }
 }
 
-for (const root of [join(dist, 'server'), join(dist, 'static')]) {
-  try {
-    walk(root)
-  } catch (error) {
-    if (error.code !== 'ENOENT') throw error
+if (worker) {
+  // A missing bundle must fail: passing would mean nothing was checked.
+  walk(dist)
+} else {
+  for (const root of [join(dist, 'server'), join(dist, 'static')]) {
+    try {
+      walk(root)
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error
+    }
   }
 }
 

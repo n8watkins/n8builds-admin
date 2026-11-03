@@ -15,10 +15,16 @@
     "postbuild": "node scripts/check-no-dev-bypass.mjs",
     "build:e2e": "ADMIN_E2E_BUILD=1 next build",
     "postbuild:e2e": "ADMIN_E2E_BUILD=1 node scripts/check-no-dev-bypass.mjs",
+    "build:worker": "opennextjs-cloudflare build && node scripts/check-no-dev-bypass.mjs --worker",
+    "preview": "npm run build:worker && opennextjs-cloudflare preview",
+    "deploy": "npm run build:worker && opennextjs-cloudflare deploy",
+    "check:deploy": "wrangler deploy --dry-run",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv --strict-vars=false cloudflare-env.d.ts",
+    "check:cf-types": "wrangler types --env-interface CloudflareEnv --strict-vars=false --check cloudflare-env.d.ts",
     "start": "next start -p 3831",
     "start:e2e": "ADMIN_E2E_BUILD=1 ADMIN_TEST_AUTH=1 next start -p 3831",
     "lint": "eslint . --max-warnings 0",
-    "type-check": "next typegen && tsc --noEmit",
+    "type-check": "next typegen && tsc --noEmit && tsc --noEmit -p tsconfig.worker.json",
     "test": "vitest run",
     "test:e2e": "npm run build && npm run build:e2e && playwright test",
     "test:e2e:only": "playwright test",
@@ -29,7 +35,8 @@
     "prepare": "git config core.hooksPath .githooks || true"
   },
   "dependencies": {
-    "@sentry/nextjs": "^10.76.2",
+    "@opennextjs/cloudflare": "1.20.15",
+    "@sentry/nextjs": "11.10.0",
     "@upstash/redis": "^1.40.0",
     "jose": "^6.2.13",
     "next": "^16.4.3",
@@ -54,7 +61,8 @@
     "release-kit": "github:n8watkins/release-kit#v2.5.2",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.3",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "wrangler": "4.157.0"
   },
   "overrides": {
     "minimatch": "^11.0.3",

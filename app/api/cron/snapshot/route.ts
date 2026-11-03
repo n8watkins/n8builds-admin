@@ -9,10 +9,10 @@ import { SNAPSHOT_TTL_SECONDS, isStoreConnected, store, utcDate, type Snapshot }
 export const dynamic = 'force-dynamic'
 
 /**
- * The daily snapshot (vercel.json runs it at 06:15 UTC): stars per repo and
+ * The daily snapshot (a Cron Trigger runs it at 06:15 UTC, worker/handlers.ts): stars per repo and
  * this month's Actions minutes, saved as `snapshot:<date>` so the trend panel
  * can show "+3 stars this week" past GitHub's 14-day windows.
- * Vercel Cron calls it with `Authorization: Bearer $CRON_SECRET`; the signed-in
+ * The cron calls it with `Authorization: Bearer $CRON_SECRET`; the signed-in
  * owner can also run it by hand. Anyone else gets 401.
  */
 function fromCron(request: NextRequest): boolean {

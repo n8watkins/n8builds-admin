@@ -18,9 +18,11 @@ function isSet(name: string): boolean {
 }
 
 export async function itemStatus(item: SetupItem): Promise<ItemStatus> {
-  if (item.check === 'manual') return { state: 'manual', label: 'Check in Vercel', missing: [], note: 'The dashboard can\'t see this setting, so confirm it in Vercel.' }
+  if (item.check === 'manual') return { state: 'manual', label: 'Check in Cloudflare', missing: [], note: 'The dashboard can\'t see this setting, so confirm it in Cloudflare.' }
   if (item.check === 'deployed') {
-    return process.env.VERCEL_ENV === 'production'
+    // APP_ENV is set by wrangler.jsonc on the Worker; VERCEL_ENV covers the
+    // Vercel deployment until that project is deleted.
+    return (process.env.APP_ENV ?? process.env.VERCEL_ENV) === 'production'
       ? { state: 'done', label: 'Live', missing: [] }
       : { state: 'missing', label: 'Not deployed yet', missing: [], note: 'This copy is running locally.' }
   }

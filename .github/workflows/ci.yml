@@ -77,7 +77,13 @@ jobs:
       - run: npm run lint
       - run: npm run type-check
       - run: npm test
-      - run: npm run build
+      # cloudflare-env.d.ts must match wrangler.jsonc's bindings.
+      - run: npm run check:cf-types
+      # The normal build (.next, which the gate specs start) and the Worker
+      # bundle made from it, checked for both sign-in bypasses, then a dry-run
+      # deploy, so a change that breaks the Cloudflare build fails here.
+      - run: npm run build:worker
+      - run: npm run check:deploy
       - run: npm run build:e2e
       - run: npx playwright test
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

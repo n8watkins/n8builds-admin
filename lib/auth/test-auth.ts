@@ -8,15 +8,17 @@
  *   the first check compiles to `"" !== "1"` and the function always returns
  *   false; no runtime variable can turn it back on. An E2E build also writes
  *   to `.next-e2e`, never `.next`, and next.config.mjs refuses to make one on
- *   Vercel at all.
- * - It is not running on Vercel.
+ *   Vercel or for a Cloudflare Worker at all.
+ * - It is not running on a host: not on Vercel (`VERCEL`), and not on
+ *   Cloudflare Workers, where wrangler.jsonc sets `APP_ENV`.
  * - ADMIN_TEST_AUTH is exactly `1` when the server starts.
  *
  * tests/unit/test-auth.test.ts pins this, and the postbuild check fails a
- * normal build if the stub survives in it.
+ * normal build (and the Worker bundle, `npm run build:worker`) if the stub
+ * survives in it.
  */
 export function isTestAuthEnabled(): boolean {
   if (process.env.ADMIN_E2E_BUILD !== '1') return false
-  if (process.env.VERCEL) return false
+  if (process.env.VERCEL || process.env.APP_ENV) return false
   return process.env.ADMIN_TEST_AUTH === '1'
 }

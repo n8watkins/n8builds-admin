@@ -8,7 +8,7 @@
 *.pem
 npm-debug.log*
 
-# Local env files: secrets live here and in Vercel, never in git.
+# Local env files: secrets live here and in the Worker, never in git.
 .env
 .env*.local
 
@@ -22,3 +22,8 @@ next-env.d.ts
 # Playwright
 /test-results/
 /playwright-report/
+
+# Cloudflare (OpenNext build output, wrangler's local state and secrets)
+/.open-next/
+/.wrangler/
+.dev.vars*

@@ -5,6 +5,7 @@ import { isDevBypassEnabled } from '@/lib/auth/dev-bypass'
 
 function env(vars: Record<string, string | undefined>) {
   vi.stubEnv('VERCEL', undefined)
+  vi.stubEnv('APP_ENV', undefined)
   for (const [name, value] of Object.entries(vars)) vi.stubEnv(name, value)
 }
 
@@ -29,6 +30,13 @@ describe('isDevBypassEnabled', () => {
   it('is off on Vercel even in development mode', () => {
     env({ NODE_ENV: 'development', ADMIN_DEV_BYPASS: '1', VERCEL: '1' })
     expect(isDevBypassEnabled()).toBe(false)
+  })
+
+  it('is off on Cloudflare Workers (APP_ENV set by wrangler.jsonc) even in development mode', () => {
+    for (const appEnv of ['production', 'preview', 'anything']) {
+      env({ NODE_ENV: 'development', ADMIN_DEV_BYPASS: '1', APP_ENV: appEnv })
+      expect(isDevBypassEnabled()).toBe(false)
+    }
   })
 
   it('needs exactly "1"', () => {
