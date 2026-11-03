@@ -26,4 +26,4 @@ jobs:
     permissions:
       contents: write # merge the pull request
       pull-requests: write # turn on auto-merge
-    uses: n8watkins/release-kit/.github/workflows/auto-merge.yml@v2.4.0
+    uses: n8watkins/release-kit/.github/workflows/auto-merge.yml@v2.4.1
