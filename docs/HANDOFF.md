@@ -19,13 +19,11 @@ Setup details: `docs/SETUP.md`.
 
 ### Next
 
-1. Once the owner adds the Redis variables, check the Dino game page shows real numbers after a few games on n8builds.dev and the portfolio.
-2. Once the Sentry token is set, check the Sentry panel loads.
+1. Done 2026-10-28: the analytics Redis is connected (dino rounds from both sites land) and the Sentry panel has its token.
 
 ### Blocked on the owner
 
-- A second Upstash Redis database, with `ANALYTICS_REDIS_REST_URL` and `ANALYTICS_REDIS_REST_TOKEN` set on both this Vercel project and n8builds-web's.
-- A read-only Sentry token.
-- The first sign-in.
+Nothing blocks the code.
+The owner's open steps (rotating both GitHub tokens, which also resets their 2027 expiry) are in [../OWNER-TODO.md](../OWNER-TODO.md); keep that file current instead of listing them here.
 
 The cross-project backlog lives in n8builds-web: `PROJECT_BACKLOG.md`.
