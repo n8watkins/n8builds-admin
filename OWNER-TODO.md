@@ -20,6 +20,8 @@ Regenerate the two fine-grained tokens and replace them in Vercel.
 **Steps.**
 
 1. GitHub, Settings, Developer settings, Personal access tokens, Fine-grained tokens: open `n8builds-admin read` and choose **Regenerate token**, with a 1-year expiry and the same access (listed in [docs/SETUP.md](docs/SETUP.md) section 2).
+   Before saving, check two settings: **Account permissions, Plan: Read-only** (the Actions minutes page shows nothing without it; the current token was made before this was added), and **Repository access**: keep the selected repos, or choose All repositories if you want the planned Projects page to cover every repo.
+   Never paste the new token into a chat with an agent: step 2 puts it in `pass` and pipes it straight into Vercel.
 2. In your own terminal, from the repo folder:
 
    ```sh
