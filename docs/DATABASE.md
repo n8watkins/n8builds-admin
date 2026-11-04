@@ -39,7 +39,9 @@ No visitor data.
 
 ## Migrations, local development and tests
 
-- `npm run db:migrate` applies new files in `migrations/admin/` to `n8builds-admin` (wrangler's logged-in account, or a token with `D1: Edit`); run it before merging a pull request that adds one.
+- The deploy workflow runs `npm run db:migrate` before every deploy from `main`, so a new file in `migrations/admin/` reaches `n8builds-admin` before the code that reads it.
+  To apply one by hand, run the same command (wrangler's logged-in account, or a token with `D1: Edit`).
+  Keep migrations additive, so the previous deployment keeps working against the new schema.
   This repository never applies migrations to n8builds-web's databases.
 - `npm run db:local` creates the tables in wrangler's local simulation for `next dev` and the E2E servers: this repository's migrations, and a copy of n8builds-web's schema (`tests/fixtures/web-schema/`, never applied anywhere but locally).
   When n8builds-web adds a migration, copy it there in the pull request that reads it.

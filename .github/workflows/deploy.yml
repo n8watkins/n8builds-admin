@@ -43,6 +43,12 @@ jobs:
         if: env.CLOUDFLARE_API_TOKEN == ''
         run: echo "::notice::Built, but skipping the deploy until the CLOUDFLARE_API_TOKEN secret is added (DEPLOY.md)."
 
+      # Applies any new file in migrations/admin before the code that needs it
+      # goes live; a no-op when the database is current (docs/DATABASE.md).
+      - name: Apply database migrations
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        run: npm run db:migrate
+
       - name: Deploy
         if: env.CLOUDFLARE_API_TOKEN != ''
         run: npx opennextjs-cloudflare deploy
