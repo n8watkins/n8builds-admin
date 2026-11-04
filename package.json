@@ -50,7 +50,7 @@
     "@axe-core/playwright": "^4.14.0",
     "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "^4.3.3",
-    "@types/node": "^24.19.2",
+    "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "chrome-launcher": "^1.2.2",
@@ -61,7 +61,7 @@
     "postcss": "^8.5.32",
     "release-kit": "github:n8watkins/release-kit#v2.8.1",
     "tailwindcss": "^4.3.3",
-    "typescript": "~6.0.3",
+    "typescript": "~7.0.2",
     "vitest": "^5.0.5",
     "wrangler": "4.157.0"
   },
