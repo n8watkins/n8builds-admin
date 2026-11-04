@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: 'Sign in' }
 export const dynamic = 'force-dynamic'
 
 const ERRORS: Record<string, string> = {
-  'not-configured': 'Sign-in isn\'t set up yet: the GitHub OAuth App and session secret are missing (docs/SETUP.md, step 1).',
+  'not-configured': 'Sign-in isn\'t set up yet: it needs the GitHub OAuth App\'s client ID and secret and a session secret (docs/SETUP.md, step 1).',
   state: 'That sign-in link expired or was already used. Try again.',
   exchange: 'GitHub didn\'t confirm the sign-in. Try again.',
   'not-owner': 'This dashboard is private to its owner.',

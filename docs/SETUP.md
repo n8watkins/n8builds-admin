@@ -81,7 +81,7 @@ Sets: `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECTS`, `SENTRY_API_BASE` (o
 Reads the referral, contact and dino game counts and the waitlist from the databases n8builds-web writes, and keeps the daily stars and minutes snapshot in the dashboard's own database.
 
 1. The three databases already exist and are bound in `wrangler.jsonc`: `n8builds-waitlist` and `n8builds-analytics` (owned by n8builds-web, read only here) and `n8builds-admin` (this dashboard's own).
-2. Before the first deploy, and after pulling a new file in `migrations/admin/`, run `npm run db:migrate` to create the snapshot table.
+2. The deploy from `main` applies new files in `migrations/admin/` (`npm run db:migrate`) before the code goes live; run it by hand only for a local or manual deploy.
 3. Make a cron secret with `openssl rand -hex 32` and set it as `CRON_SECRET` (the Worker's Cron Trigger sends it to the snapshot route).
 4. The daily snapshot (`/api/cron/snapshot`, 06:15 UTC, a Cron Trigger in `wrangler.jsonc`) starts on the first deploy, and trends fill in from the next day.
 5. docs/DATABASE.md has the tables, who owns each database, retention and backups.
