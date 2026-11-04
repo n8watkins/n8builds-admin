@@ -59,7 +59,7 @@
     "eslint-config-next": "^16.4.3",
     "lighthouse": "^13.6.0",
     "postcss": "^8.5.32",
-    "release-kit": "github:n8watkins/release-kit#v2.8.0",
+    "release-kit": "github:n8watkins/release-kit#v2.8.1",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.3",
     "vitest": "^5.0.5",
