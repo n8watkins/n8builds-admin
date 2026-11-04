@@ -24,10 +24,11 @@ export type SetupItem = {
   powers: { label: string; href: string }[]
   /**
    * How the app can tell it's done: `env` (its required variables are set),
+   * `bindings` (its D1 bindings exist, and its required variables are set),
    * `deployed` (running in production, on the Cloudflare Worker) or `manual` (only visible in
    * another dashboard, so the page can only say what to check).
    */
-  check: 'env' | 'deployed' | 'manual'
+  check: 'env' | 'bindings' | 'deployed' | 'manual'
   vars: SetupVar[]
   steps: string[]
   /** The places the steps happen, as buttons on the Setup page. */
@@ -156,30 +157,31 @@ export const SETUP_ITEMS: SetupItem[] = [
     links: [{ label: 'Sentry auth tokens', href: 'https://sentry.io/settings/account/api/auth-tokens/' }],
   },
   {
-    id: 'upstash',
-    title: 'Counters and trends: a second Upstash database',
-    why: 'Stores the daily snapshot (stars and minutes trends), the Appturnity referral and contact message counts, and the dino game stats. Set the two database variables on the n8builds-web project as well: it writes the counts.',
+    id: 'databases',
+    title: 'Counters, trends and the waitlist: the D1 databases',
+    why: 'Reads the referral, contact and dino game counts and the waitlist from the databases n8builds-web writes, and keeps the daily stars and minutes snapshot in the dashboard\'s own database.',
     powers: [
       { label: 'Stars trend', href: '/repos' },
       { label: 'Referrals', href: '/referrals' },
       { label: 'Contact messages', href: '/contact' },
       { label: 'Dino game', href: '/game' },
+      { label: 'Waitlist', href: '/waitlist' },
     ],
-    check: 'env',
+    check: 'bindings',
     vars: [
-      { name: 'ANALYTICS_REDIS_REST_URL', where: 'Worker secret' },
-      { name: 'ANALYTICS_REDIS_REST_TOKEN', where: 'Worker secret' },
+      { name: 'WAITLIST_DB', where: 'D1 binding (wrangler.jsonc)' },
+      { name: 'ANALYTICS_DB', where: 'D1 binding (wrangler.jsonc)' },
+      { name: 'ADMIN_DB', where: 'D1 binding (wrangler.jsonc)' },
       { name: 'CRON_SECRET', where: 'Worker secret' },
     ],
     steps: [
-      'Keep it separate from the contact form\'s database, so counters can never use up the form\'s quota and switch it off.',
-      'In Upstash, Create Database: name `n8builds-analytics`, type Redis, plan Free, region US East.',
-      'Copy the REST URL and REST token and set them as `ANALYTICS_REDIS_REST_URL` and `ANALYTICS_REDIS_REST_TOKEN`.',
+      'The three databases already exist and are bound in `wrangler.jsonc`: `n8builds-waitlist` and `n8builds-analytics` (owned by n8builds-web, read only here) and `n8builds-admin` (this dashboard\'s own).',
+      'Before the first deploy, and after pulling a new file in `migrations/admin/`, run `npm run db:migrate` to create the snapshot table.',
       'Make a cron secret with `openssl rand -hex 32` and set it as `CRON_SECRET` (the Worker\'s Cron Trigger sends it to the snapshot route).',
       'The daily snapshot (`/api/cron/snapshot`, 06:15 UTC, a Cron Trigger in `wrangler.jsonc`) starts on the first deploy, and trends fill in from the next day.',
-      'The referral and contact counters also need a small change in n8builds-web (an agent task, not yet done), using the same two Upstash variables there.',
+      'docs/DATABASE.md has the tables, who owns each database, retention and backups.',
     ],
-    links: [{ label: 'Upstash console', href: 'https://console.upstash.com/redis' }],
+    links: [{ label: 'D1 in Cloudflare', href: 'https://dash.cloudflare.com/?to=/:account/workers/d1' }],
   },
   {
     id: 'cloudflare-deploys',

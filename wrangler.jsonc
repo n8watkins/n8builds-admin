@@ -7,7 +7,7 @@
   "main": "worker/index.ts",
   "compatibility_date": "2026-11-01",
   // nodejs_compat is required by OpenNext; global_fetch_strictly_public keeps
-  // the server's own fetches (GitHub, GA4, Sentry, Upstash) on the public internet.
+  // the server's own fetches (GitHub, GA4, Sentry) on the public internet.
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
     "directory": ".open-next/assets",
@@ -17,6 +17,23 @@
   "images": { "binding": "IMAGES" },
   // Next's data cache (the five-minute upstream reads, lib/cache.ts) lives in R2.
   "r2_buckets": [{ "binding": "NEXT_INC_CACHE_R2_BUCKET", "bucket_name": "n8builds-admin-opennext-cache" }],
+  // The data (docs/DATABASE.md). n8builds-web owns WAITLIST_DB and ANALYTICS_DB
+  // (it holds their migrations and is their only writer); this Worker only
+  // reads them, enforced in lib/db.ts and its tests. ADMIN_DB is this Worker's
+  // own (migrations/admin, npm run db:migrate).
+  "d1_databases": [
+    { "binding": "WAITLIST_DB", "database_name": "n8builds-waitlist", "database_id": "788b0aa9-fe2d-40ae-bcd4-b5590969ff60" },
+    { "binding": "ANALYTICS_DB", "database_name": "n8builds-analytics", "database_id": "3a0b72c8-fa2e-4f82-9e48-5d2d5ec7eb5c" },
+    {
+      "binding": "ADMIN_DB",
+      "database_name": "n8builds-admin",
+      "database_id": "a21d887c-6aaf-4713-9eb6-258c4aa71ca2",
+      "migrations_dir": "migrations/admin"
+    }
+  ],
+  // The one waitlist write the dashboard needs (deleting an address on
+  // request) is n8builds-web's, over RPC: its WaitlistAdmin entrypoint.
+  "services": [{ "binding": "WAITLIST_ADMIN", "service": "n8builds-web", "entrypoint": "WaitlistAdmin" }],
   // The daily snapshot (worker/handlers.ts), at the time the Vercel cron ran.
   "triggers": { "crons": ["15 6 * * *"] },
   "vars": {
@@ -30,8 +47,7 @@
   // GITHUB_OAUTH_CLIENT_ID, GITHUB_OAUTH_CLIENT_SECRET, ADMIN_SESSION_SECRET,
   // GITHUB_TOKEN, GITHUB_ORG_TOKEN, GA4_PROPERTY_ID, GOOGLE_SA_CLIENT_EMAIL,
   // GOOGLE_SA_PRIVATE_KEY, SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECTS,
-  // SENTRY_DSN, ANALYTICS_REDIS_REST_URL, ANALYTICS_REDIS_REST_TOKEN,
-  // CRON_SECRET, CLOUDFLARE_DEPLOYS_TOKEN. Each page shows "not connected"
+  // SENTRY_DSN, CRON_SECRET, CLOUDFLARE_DEPLOYS_TOKEN. Each page shows "not connected"
   // until its secrets exist.
   "observability": { "enabled": true, "head_sampling_rate": 1 },
   "workers_dev": true,

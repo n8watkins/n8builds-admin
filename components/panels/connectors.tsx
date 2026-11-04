@@ -3,11 +3,11 @@ import { formatDuration, formatNumber, formatPercent, timeAgo } from '@/lib/form
 import { ga4Config, getTraffic } from '@/lib/ga4'
 import { CLOUDFLARE_ACCOUNT } from '@/lib/repos'
 import { getSentrySummary, sentryConfig } from '@/lib/sentry'
-import { isStoreConnected, readDailyCounts, readDailyHashTotals, readSnapshots } from '@/lib/store'
+import { isAdminDbConnected, isAnalyticsConnected, readDailyCounts, readDailyFieldTotals, readSnapshots } from '@/lib/store'
 import { Sparkline } from '../Sparkline'
 import { Actions, BarList, ExternalAction, NotConnected, OutLink, PanelError, Stat, errorMessage } from '../ui'
 
-const STORE_VARS = ['ANALYTICS_REDIS_REST_URL', 'ANALYTICS_REDIS_REST_TOKEN']
+const STORE_VARS = ['ANALYTICS_DB (D1 binding)']
 const code = 'rounded bg-white/[0.07] px-1.5 py-0.5 font-mono text-[0.9em] text-slate-100 [overflow-wrap:anywhere]'
 
 // ---------------------------------------------------------------------------
@@ -128,19 +128,19 @@ export async function TrafficPanel() {
 
 const REFERRAL_PLAN = [
   <>n8builds-web&apos;s Tech for Pros buttons go through a counted short link, <code className={code}>n8builds.dev/techforpros?from=&lt;placement&gt;</code> (navbar, card).</>,
-  <>The route redirects at once to techforpros.com with <code className={code}>utm_source=n8builds.dev</code>, then adds one to <code className={code}>ref:techforpros:&lt;date&gt;</code> in the analytics database. No IP, ID or cookie.</>,
-  <>Old Appturnity links (<code className={code}>n8builds.dev/appturnity</code>) work the same way and count under <code className={code}>ref:appturnity</code>.</>,
+  <>The route redirects at once to techforpros.com with <code className={code}>utm_source=n8builds.dev</code>, then adds one to the day&apos;s <code className={code}>ref:techforpros</code> count in the analytics database (n8builds-analytics). No IP, ID or cookie.</>,
+  <>Old Appturnity links (<code className={code}>n8builds.dev/appturnity</code>) work the same way and count under <code className={code}>ref:appturnity</code>. Clicks past 20 an hour from one address aren&apos;t counted.</>,
 ]
 
 export async function ReferralsPanel() {
-  if (!isStoreConnected()) {
+  if (!(await isAnalyticsConnected())) {
     return (
       <NotConnected
         why="Counting our own clicks works even with ad blockers and without Google's cookies; Google Analytics alone would miss many of them."
         willShow={['Clicks today, 7 and 30 days', 'Which placement works best', '30-day trend']}
         needs={STORE_VARS}
         plan={REFERRAL_PLAN}
-        setupId="upstash"
+        setupId="databases"
         actions={<ExternalAction href="https://techforpros.com" describe="Open techforpros.com">
             techforpros.com
           </ExternalAction>}
@@ -149,7 +149,7 @@ export async function ReferralsPanel() {
   }
   let days, old
   try {
-    ;[days, old] = await Promise.all([readDailyHashTotals('ref:techforpros', 30), readDailyHashTotals('ref:appturnity', 30)])
+    ;[days, old] = await Promise.all([readDailyFieldTotals('ref:techforpros', 30), readDailyFieldTotals('ref:appturnity', 30)])
   } catch (error) {
     return <PanelError message={errorMessage(error)} />
   }
@@ -189,19 +189,19 @@ export async function ReferralsPanel() {
 // Contact messages
 
 const CONTACT_PLAN = [
-  <>After a message is delivered, n8builds-web&apos;s contact route adds one to <code className={code}>contact:sent:&lt;date&gt;</code> in the analytics database.</>,
-  'A failed count never fails the send, and the counter lives apart from the form\'s rate-limit database so it can\'t use up its quota.',
+  <>After a message is delivered, n8builds-web&apos;s contact route adds one to the day&apos;s <code className={code}>contact:sent</code> count in the analytics database (n8builds-analytics).</>,
+  'A failed count never fails the send, and only a daily number is stored.',
 ]
 
 export async function ContactPanel() {
-  if (!isStoreConnected()) {
+  if (!(await isAnalyticsConnected())) {
     return (
       <NotConnected
         why="Shows how many people wrote in, without opening Gmail. Only a daily number is stored, never the message."
         willShow={['Messages this week and month', 'Against the 50-a-day cap']}
         needs={STORE_VARS}
         plan={CONTACT_PLAN}
-        setupId="upstash"
+        setupId="databases"
         actions={<ExternalAction href="https://mail.google.com" describe="Open Gmail">
             Gmail
           </ExternalAction>}
@@ -231,17 +231,17 @@ export async function ContactPanel() {
 // Trends (daily snapshot)
 
 export async function TrendsPanel() {
-  if (!isStoreConnected()) {
+  if (!(await isAdminDbConnected())) {
     return (
       <NotConnected
         why="GitHub only keeps today's numbers, so the dashboard saves one snapshot a day to show stars and minutes over time."
         willShow={['Stars over 30 days', 'Minutes used by day', 'Change this week']}
-        needs={[...STORE_VARS, 'CRON_SECRET']}
+        needs={['ADMIN_DB (D1 binding)', 'CRON_SECRET']}
         plan={[
           <>A Cron Trigger on the Worker calls <code className={code}>/api/cron/snapshot</code> daily at 06:15 UTC (already built, in wrangler.jsonc).</>,
-          <>It saves stars per repo and this month&apos;s minutes as <code className={code}>snapshot:&lt;date&gt;</code>, kept 400 days.</>,
+          <>It saves stars per repo and this month&apos;s minutes as a row of <code className={code}>admin_snapshots</code> in the dashboard&apos;s own database, kept 400 days.</>,
         ]}
-        setupId="upstash"
+        setupId="databases"
       />
     )
   }

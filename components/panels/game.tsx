@@ -1,20 +1,20 @@
 import { formatNumber } from '@/lib/format'
 import { readGameStats, type GameSite, type HighScore } from '@/lib/game'
-import { isStoreConnected } from '@/lib/store'
+import { isAnalyticsConnected } from '@/lib/store'
 import { Sparkline } from '../Sparkline'
 import { BarList, NotConnected, PanelError, Stat, errorMessage } from '../ui'
 
 // ---------------------------------------------------------------------------
 // The dino catch game, on n8builds.dev and the portfolio
 
-const STORE_VARS = ['ANALYTICS_REDIS_REST_URL', 'ANALYTICS_REDIS_REST_TOKEN']
+const STORE_VARS = ['ANALYTICS_DB (D1 binding)']
 const code = 'rounded bg-white/[0.06] px-1 py-0.5 font-mono text-[13px] text-slate-200'
 
 const GAME_PLAN = [
   <>The dino in the AI kit (n8builds.dev) and the tech stack card (portfolio.n8builds.dev) sends a round&apos;s start and its score to n8builds.dev&apos;s <code className={code}>/api/game</code>.</>,
   <>That route takes only the two sites, rate limits each player, and counts a score only for a round started at least 29 seconds earlier, capped at 60.</>,
   'A player is a hash of IP and browser with a salt that changes every day and is deleted after two days: no IP, user agent or cookie is ever stored.',
-  <>Set the same two variables on the <strong>n8builds-web</strong> project too: that is where the counts are written.</>,
+  <>The counts live in n8builds-analytics, which <strong>n8builds-web</strong> writes and this dashboard only reads.</>,
 ]
 
 const SITE_LABEL: Record<GameSite, string> = { n8builds: 'n8builds.dev', portfolio: 'portfolio' }
@@ -57,14 +57,14 @@ function HighScores({ rows }: { rows: HighScore[] }) {
 }
 
 export async function GamePanel() {
-  if (!isStoreConnected()) {
+  if (!(await isAnalyticsConnected())) {
     return (
       <NotConnected
         why="Counting the game's rounds ourselves keeps it private: no cookies, no consent banner, and no data sent to anyone else."
         willShow={['Rounds started and finished', 'Players per day, per site', 'High scores with site, country and date', 'Scores and countries']}
         needs={STORE_VARS}
         plan={GAME_PLAN}
-        setupId="upstash"
+        setupId="databases"
       />
     )
   }

@@ -13,9 +13,8 @@ vi.mock('@sentry/nextjs', () => sentry)
 
 const state = vi.hoisted(() => ({ store: true, github: true, repoOk: true, owner: false, set: vi.fn() }))
 vi.mock('@/lib/store', () => ({
-  SNAPSHOT_TTL_SECONDS: 1,
-  isStoreConnected: () => state.store,
-  store: () => ({ set: state.set }),
+  isAdminDbConnected: async () => state.store,
+  writeSnapshot: (...args: unknown[]) => state.set(...args),
   utcDate: () => '2026-10-28',
 }))
 vi.mock('@/lib/github', () => ({
@@ -57,7 +56,7 @@ describe('the daily snapshot reports to Sentry', () => {
     state.store = false
     expect((await call('Bearer secret')).status).toBe(503)
     expect(statuses()).toEqual(['in_progress', 'error'])
-    expect(sentry.captureMessage).toHaveBeenCalledWith('Daily snapshot: the analytics database is not connected', 'error')
+    expect(sentry.captureMessage).toHaveBeenCalledWith('Daily snapshot: the admin database is not connected', 'error')
   })
 
   it("doesn't check in when the owner runs it by hand, so the monitor tracks the schedule only", async () => {

@@ -1,32 +1,18 @@
 import 'server-only'
-import { Redis } from '@upstash/redis'
+import { adminDb, analyticsDb } from './db'
 
 /**
- * The analytics database: a second free Upstash database, separate from the
- * contact form's, so counters can never use up the form's quota and switch it
- * off. Its counters are daily totals: no IPs, no visitor IDs, no cookies. The one
- * exception is the waitlist, which keeps the addresses people chose to give.
- *
- * Keys (all dates are UTC `YYYY-MM-DD`):
- * - `snapshot:<date>`            JSON Snapshot, written once a day by /api/cron/snapshot, kept 400 days.
- * - `ref:appturnity:<date>`      hash: link placement -> clicks from n8builds.dev to appturnity.com.
- * - `contact:sent:<date>`        integer: contact messages delivered that day.
- * The last two are written by n8builds-web (not built yet; see the panels' plans).
- * - `waitlist:*`                 the /upcoming waitlist's sign-ups (emails people gave, with consent), lib/waitlist.ts.
+ * The counters and trends (docs/DATABASE.md):
+ * - n8builds-analytics (n8builds-web writes it; read only here): `analytics_daily`
+ *   rows of (metric, day, field, count), e.g. `ref:techforpros` by link
+ *   placement, `contact:sent`, and the dino game's (lib/game.ts). Daily totals
+ *   only: no IPs, no visitor IDs, no cookies.
+ * - n8builds-admin (this dashboard's own): `admin_snapshots`, one JSON snapshot
+ *   a day written by /api/cron/snapshot, kept SNAPSHOT_KEEP_DAYS.
+ * All dates are UTC `YYYY-MM-DD`.
  */
-export function isStoreConnected(): boolean {
-  return Boolean(process.env.ANALYTICS_REDIS_REST_URL && process.env.ANALYTICS_REDIS_REST_TOKEN)
-}
 
-let client: Redis | null = null
-
-export function store(): Redis {
-  if (!isStoreConnected()) throw new Error('The analytics database is not connected')
-  client ??= new Redis({ url: process.env.ANALYTICS_REDIS_REST_URL!, token: process.env.ANALYTICS_REDIS_REST_TOKEN! })
-  return client
-}
-
-export const SNAPSHOT_TTL_SECONDS = 400 * 24 * 60 * 60
+export const SNAPSHOT_KEEP_DAYS = 400
 
 export type Snapshot = {
   date: string
@@ -44,26 +30,64 @@ export function lastDays(days: number, now = new Date()): string[] {
   return Array.from({ length: days }, (_, index) => utcDate(new Date(now.getTime() - (days - 1 - index) * 86_400_000)))
 }
 
-export async function readSnapshots(days = 30): Promise<(Snapshot | null)[]> {
-  const keys = lastDays(days).map((date) => `snapshot:${date}`)
-  return store().mget<(Snapshot | null)[]>(...keys)
+/** Whether the counters can be read (the Worker binds n8builds-analytics). */
+export async function isAnalyticsConnected(): Promise<boolean> {
+  return (await analyticsDb()) !== null
 }
 
-/** Daily totals of a hash counter (`ref:appturnity`) over the last `days`. */
-export async function readDailyHashTotals(prefix: string, days = 30): Promise<{ date: string; total: number; byField: Record<string, number> }[]> {
-  const dates = lastDays(days)
-  const pipeline = store().pipeline()
-  for (const date of dates) pipeline.hgetall(`${prefix}:${date}`)
-  const results = (await pipeline.exec()) as (Record<string, number | string> | null)[]
-  return dates.map((date, index) => {
-    const byField = Object.fromEntries(Object.entries(results[index] ?? {}).map(([field, value]) => [field, Number(value) || 0]))
+/** Whether the daily snapshot can be kept (the Worker binds n8builds-admin). */
+export async function isAdminDbConnected(): Promise<boolean> {
+  return (await adminDb()) !== null
+}
+
+async function analytics() {
+  const db = await analyticsDb()
+  if (!db) throw new Error('The analytics database is not connected')
+  return db
+}
+
+export async function readSnapshots(days = 30, now = new Date()): Promise<(Snapshot | null)[]> {
+  const db = await adminDb()
+  if (!db) throw new Error('The admin database is not connected')
+  const dates = lastDays(days, now)
+  const { results } = await db.prepare('SELECT day, data FROM admin_snapshots WHERE day >= ? ORDER BY day').bind(dates[0]).all<{ day: string; data: string }>()
+  const byDay = new Map(results.map((row) => [row.day, JSON.parse(row.data) as Snapshot]))
+  return dates.map((date) => byDay.get(date) ?? null)
+}
+
+/** Saves today's snapshot (replacing an earlier run's) and drops the ones past SNAPSHOT_KEEP_DAYS. */
+export async function writeSnapshot(snapshot: Snapshot, now = new Date()): Promise<void> {
+  const db = await adminDb()
+  if (!db) throw new Error('The admin database is not connected')
+  const oldest = lastDays(SNAPSHOT_KEEP_DAYS, now)[0]
+  await db.batch([
+    db
+      .prepare('INSERT INTO admin_snapshots (day, data, created_at) VALUES (?, ?, ?) ON CONFLICT (day) DO UPDATE SET data = excluded.data, created_at = excluded.created_at')
+      .bind(snapshot.date, JSON.stringify(snapshot), now.toISOString()),
+    db.prepare('DELETE FROM admin_snapshots WHERE day < ?').bind(oldest),
+  ])
+}
+
+/** Daily totals of a counter with fields (`ref:techforpros`, `game:rounds`) over the last `days`. */
+export async function readDailyFieldTotals(
+  metric: string,
+  days = 30,
+  now = new Date()
+): Promise<{ date: string; total: number; byField: Record<string, number> }[]> {
+  const dates = lastDays(days, now)
+  const rows = await (await analytics()).all<{ day: string; field: string; count: number }>(
+    'SELECT day, field, count FROM analytics_daily WHERE metric = ? AND day >= ?',
+    metric,
+    dates[0]
+  )
+  return dates.map((date) => {
+    const byField: Record<string, number> = {}
+    for (const row of rows) if (row.day === date) byField[row.field] = (byField[row.field] ?? 0) + row.count
     return { date, total: Object.values(byField).reduce((sum, value) => sum + value, 0), byField }
   })
 }
 
-/** Daily values of an integer counter (`contact:sent`) over the last `days`. */
-export async function readDailyCounts(prefix: string, days = 30): Promise<{ date: string; count: number }[]> {
-  const dates = lastDays(days)
-  const values = await store().mget<(number | string | null)[]>(...dates.map((date) => `${prefix}:${date}`))
-  return dates.map((date, index) => ({ date, count: Number(values[index]) || 0 }))
+/** Daily values of a plain counter (`contact:sent`) over the last `days`. */
+export async function readDailyCounts(metric: string, days = 30, now = new Date()): Promise<{ date: string; count: number }[]> {
+  return (await readDailyFieldTotals(metric, days, now)).map(({ date, total }) => ({ date, count: total }))
 }

@@ -76,19 +76,18 @@ Reads unresolved and new issues and error volume for the sites Sentry already wa
 Where: [Sentry auth tokens](https://sentry.io/settings/account/api/auth-tokens/).
 Sets: `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECTS`, `SENTRY_API_BASE` (optional), `SENTRY_DSN` (optional).
 
-## 5. Counters and trends: a second Upstash database
+## 5. Counters, trends and the waitlist: the D1 databases
 
-Stores the daily snapshot (stars and minutes trends), the Appturnity referral and contact message counts, and the dino game stats. Set the two database variables on the n8builds-web project as well: it writes the counts.
+Reads the referral, contact and dino game counts and the waitlist from the databases n8builds-web writes, and keeps the daily stars and minutes snapshot in the dashboard's own database.
 
-1. Keep it separate from the contact form's database, so counters can never use up the form's quota and switch it off.
-2. In Upstash, Create Database: name `n8builds-analytics`, type Redis, plan Free, region US East.
-3. Copy the REST URL and REST token and set them as `ANALYTICS_REDIS_REST_URL` and `ANALYTICS_REDIS_REST_TOKEN`.
-4. Make a cron secret with `openssl rand -hex 32` and set it as `CRON_SECRET` (the Worker's Cron Trigger sends it to the snapshot route).
-5. The daily snapshot (`/api/cron/snapshot`, 06:15 UTC, a Cron Trigger in `wrangler.jsonc`) starts on the first deploy, and trends fill in from the next day.
-6. The referral and contact counters also need a small change in n8builds-web (an agent task, not yet done), using the same two Upstash variables there.
+1. The three databases already exist and are bound in `wrangler.jsonc`: `n8builds-waitlist` and `n8builds-analytics` (owned by n8builds-web, read only here) and `n8builds-admin` (this dashboard's own).
+2. Before the first deploy, and after pulling a new file in `migrations/admin/`, run `npm run db:migrate` to create the snapshot table.
+3. Make a cron secret with `openssl rand -hex 32` and set it as `CRON_SECRET` (the Worker's Cron Trigger sends it to the snapshot route).
+4. The daily snapshot (`/api/cron/snapshot`, 06:15 UTC, a Cron Trigger in `wrangler.jsonc`) starts on the first deploy, and trends fill in from the next day.
+5. docs/DATABASE.md has the tables, who owns each database, retention and backups.
 
-Where: [Upstash console](https://console.upstash.com/redis).
-Sets: `ANALYTICS_REDIS_REST_URL`, `ANALYTICS_REDIS_REST_TOKEN`, `CRON_SECRET`.
+Where: [D1 in Cloudflare](https://dash.cloudflare.com/?to=/:account/workers/d1).
+Sets: `WAITLIST_DB`, `ANALYTICS_DB`, `ADMIN_DB`, `CRON_SECRET`.
 
 ## 6. Deploys: a read-only Cloudflare API token
 
@@ -142,8 +141,9 @@ Where: [AI Crawl Control](https://dash.cloudflare.com/b2c564cf83cb9184dd6d7cc4ff
 | `SENTRY_PROJECTS` | 4 | Worker secret |
 | `SENTRY_API_BASE` (optional) | 4 | Worker secret, only for Sentry's EU region |
 | `SENTRY_DSN` (optional) | 4 | Worker secret |
-| `ANALYTICS_REDIS_REST_URL` | 5 | Worker secret |
-| `ANALYTICS_REDIS_REST_TOKEN` | 5 | Worker secret |
+| `WAITLIST_DB` | 5 | D1 binding (wrangler.jsonc) |
+| `ANALYTICS_DB` | 5 | D1 binding (wrangler.jsonc) |
+| `ADMIN_DB` | 5 | D1 binding (wrangler.jsonc) |
 | `CRON_SECRET` | 5 | Worker secret |
 | `CLOUDFLARE_DEPLOYS_TOKEN` | 6 | Worker secret |
 | `ADMIN_DEV_BYPASS` | - | `.env.local` only, value `1`, for the local preview before sign-in is set up |

@@ -1,0 +1,11 @@
+{
+  // The test databases (tests/unit/d1.ts): the same three D1 bindings as
+  // wrangler.jsonc, nothing else, so unit tests start fast.
+  "name": "n8builds-admin-unit",
+  "compatibility_date": "2026-11-01",
+  "d1_databases": [
+    { "binding": "WAITLIST_DB", "database_name": "n8builds-waitlist", "database_id": "test-waitlist" },
+    { "binding": "ANALYTICS_DB", "database_name": "n8builds-analytics", "database_id": "test-analytics" },
+    { "binding": "ADMIN_DB", "database_name": "n8builds-admin", "database_id": "test-admin" }
+  ]
+}
