@@ -214,8 +214,8 @@ export const AREAS: Record<AreaId, Area> = {
     accent: accent.lime,
     summary: 'Messages sent through n8builds.dev\'s contact form.',
     about: [
-      'Each message is emailed to you through Gmail; this counts them without opening the inbox.',
-      'The form allows 50 verified messages a day, well under Gmail\'s sending limit.',
+      'Each message is emailed to you through Cloudflare Email Service; this counts them without opening the inbox.',
+      'The form allows 50 verified messages a day.',
       'Only a daily number is stored, never the message.',
     ],
   },
@@ -229,7 +229,7 @@ export const AREAS: Record<AreaId, Area> = {
     about: [
       'Sign-ups confirm by email (double opt-in); unconfirmed ones expire after 7 days.',
       'Every waitlist email has a leave link that deletes the entry; Delete here does the same.',
-      'Stored in the analytics database under waitlist:* keys, written by n8builds-web.',
+      'Stored in its own database, n8builds-waitlist, which n8builds-web writes and this dashboard only reads.',
     ],
   },
   setup: {
