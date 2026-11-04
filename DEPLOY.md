@@ -1,7 +1,7 @@
 # Deploying the admin dashboard
 
 The dashboard runs on Cloudflare Workers as the `n8builds-admin` Worker in the owner's Cloudflare account, built by the OpenNext adapter (`@opennextjs/cloudflare`).
-Until the custom domain moves, it is served at https://n8builds-admin.nathancwatkins23.workers.dev, and admin.n8builds.dev still points at the Vercel deployment.
+It is served at https://admin.n8builds.dev (a Workers custom domain in `wrangler.jsonc`) and at https://n8builds-admin.nathancwatkins23.workers.dev.
 
 ## How it fits together
 
@@ -70,13 +70,11 @@ Fix forward afterwards by reverting the commit and deploying again, so the repos
 
 ## Moving admin.n8builds.dev over
 
-Vercel keeps deploying `main` and running its cron until the owner turns it off, so admin.n8builds.dev keeps working meanwhile.
-The two crons write the same `snapshot:<date>` key, so running both for a while is harmless.
-
 1. Set the Worker's secrets (docs/SETUP.md).
-2. The GitHub OAuth App's callback is `https://admin.n8builds.dev/api/auth/callback`, so sign-in works on the Worker only once the domain moves (or after adding a second OAuth App for the `workers.dev` address).
-3. In Cloudflare DNS for n8builds.dev, delete the `admin` record that points at Vercel, then add `admin.n8builds.dev` as a custom domain (`"routes": [{ "pattern": "admin.n8builds.dev", "custom_domain": true }]` in `wrangler.jsonc`) and deploy.
-4. Keep the Vercel project for a week as a rollback, then remove `vercel.json`, `.vercelignore` and `scripts/vercel-ignore-build.sh`, the `VERCEL` and `VERCEL_ENV` fallbacks, and delete the Vercel project.
+2. The GitHub OAuth App takes several callback URLs: `https://admin.n8builds.dev/api/auth/callback` stays, and adding `https://n8builds-admin.nathancwatkins23.workers.dev/api/auth/callback` lets sign-in be tested on the Worker first.
+3. In Cloudflare DNS for n8builds.dev, delete the `admin` A record that points at Vercel (76.76.21.21), then merge the change that adds `admin.n8builds.dev` to `routes` in `wrangler.jsonc`; its deploy creates the new record.
+   The two steps leave admin.n8builds.dev unanswered for the minute in between.
+4. Then remove `vercel.json`, `.vercelignore` and `scripts/vercel-ignore-build.sh`, the `VERCEL` and `VERCEL_ENV` fallbacks, and delete the Vercel project.
 
 ## Taking it down
 
