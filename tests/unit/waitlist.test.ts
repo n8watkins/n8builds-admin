@@ -34,6 +34,7 @@ describe('waitlist rows', () => {
       toRow('1', fields())!,
       toRow('2', fields({ email: 'b@example.com', projects: '', requested: 'vibelog', confirmedAt: '' }))!,
       toRow('3', fields({ email: 'c@example.com', projects: 'keysready', interest: 'keysready' }))!,
+      toRow('4', fields({ email: 'd@example.com', projects: 'feelium', interest: 'feelium' }))!,
     ]
     expect(countByProject(rows).map((c) => [c.slug, c.confirmed, c.emails])).toEqual([
       ['relink', 1, ['a@example.com']],
@@ -41,6 +42,7 @@ describe('waitlist rows', () => {
       ['vibelog', 0, []],
       ['keysready', 1, ['c@example.com']],
       ['asset-arsenal', 0, []],
+      ['feelium', 1, ['d@example.com']],
     ])
   })
 
@@ -48,6 +50,7 @@ describe('waitlist rows', () => {
     expect(projectName('keysready')).toBe('KeysReady')
     expect(projectName('asset-arsenal')).toBe('Asset Arsenal')
     expect(projectName('vibelog')).toBe('VibeLog')
+    expect(projectName('feelium')).toBe('Feelium')
     expect(projectName('someday')).toBe('someday')
   })
 

@@ -20,6 +20,7 @@ export const PROJECTS = [
   { slug: 'vibelog', name: 'VibeLog' },
   { slug: 'keysready', name: 'KeysReady' },
   { slug: 'asset-arsenal', name: 'Asset Arsenal' },
+  { slug: 'feelium', name: 'Feelium' },
 ] as const
 
 /** A project's display name; an unknown slug shows as itself. */
