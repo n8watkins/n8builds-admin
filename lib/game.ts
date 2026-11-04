@@ -1,10 +1,12 @@
 import 'server-only'
-import { lastDays, store } from './store'
+import { analyticsDb } from './db'
+import { lastDays } from './store'
 
 /**
  * The dino catch game's stats, written by n8builds-web's /api/game (its
- * lib/game/stats.ts lists the keys) from n8builds.dev and the portfolio.
- * Aggregates only: daily counters, HyperLogLog player counts, and the top
+ * lib/game/stats.ts lists the tables) from n8builds.dev and the portfolio,
+ * into n8builds-analytics, which this dashboard only reads.
+ * Aggregates only: daily counters, salted daily player hashes, and the top
  * scores with site, country and date. No IPs, no cookies.
  */
 
@@ -50,17 +52,6 @@ const BUCKETS: [string, number, number][] = [
   ['20 to 29', 20, 29],
   ['30 or more', 30, Infinity],
 ]
-
-/** Parses the top-scores sorted set ([member, score, member, score, ...]). */
-export function parseTop(flat: (string | number)[]): HighScore[] {
-  const out: HighScore[] = []
-  for (let i = 0; i + 1 < flat.length; i += 2) {
-    const [site, country, date] = String(flat[i]).split('|')
-    if (site !== 'n8builds' && site !== 'portfolio') continue
-    out.push({ score: num(flat[i + 1]), site, country: country || 'XX', date: date ?? '' })
-  }
-  return out
-}
 
 /** Turns the raw daily reads into the panel's numbers (pure, so it is unit-tested). */
 export function summarizeGame(raw: GameDayRaw[], top: HighScore[], playerDays: number): GameStats {
@@ -112,37 +103,45 @@ export function summarizeGame(raw: GameDayRaw[], top: HighScore[], playerDays: n
   }
 }
 
-/** Reads the last `days` of the game's stats in one round trip, plus the top scores. */
-export async function readGameStats(days = 30): Promise<GameStats> {
-  const dates = lastDays(days)
-  const pipeline = store().pipeline()
-  for (const date of dates) {
-    pipeline.hgetall(`game:rounds:${date}`)
-    pipeline.pfcount(`game:players:${date}`)
-    for (const site of GAME_SITES) pipeline.pfcount(`game:players:${date}:${site}`)
-    pipeline.hgetall(`game:attempts:${date}`)
-    pipeline.hgetall(`game:scores:${date}`)
-    pipeline.hgetall(`game:countries:${date}`)
+const isSite = (site: string): site is GameSite => (GAME_SITES as readonly string[]).includes(site)
+
+/** Reads the last `days` of the game's stats, plus the all-time top scores. */
+export async function readGameStats(days = 30, now = new Date()): Promise<GameStats> {
+  const db = await analyticsDb()
+  if (!db) throw new Error('The analytics database is not connected')
+  const dates = lastDays(days, now)
+  const from = dates[0]
+  const [counters, players, attempts, playerDays, top] = await Promise.all([
+    db.all<{ metric: string; day: string; field: string; count: number }>(
+      "SELECT metric, day, field, count FROM analytics_daily WHERE metric IN ('game:rounds', 'game:scores', 'game:countries') AND day >= ?",
+      from
+    ),
+    db.all<{ day: string; site: string; players: number }>('SELECT day, site, COUNT(*) AS players FROM game_players WHERE day >= ? GROUP BY day, site', from),
+    db.all<{ day: string; player: string; rounds: number }>('SELECT day, player, SUM(rounds) AS rounds FROM game_players WHERE day >= ? GROUP BY day, player', from),
+    db.first<{ n: number }>('SELECT COUNT(*) AS n FROM (SELECT DISTINCT day, player FROM game_players WHERE day >= ?)', from),
+    db.all<{ score: number; site: string; country: string; day: string }>(
+      'SELECT score, site, country, day FROM game_top ORDER BY score DESC, round_id DESC LIMIT 10'
+    ),
+  ])
+  const hash = (metric: string, date: string) => {
+    const rows = counters.filter((row) => row.metric === metric && row.day === date)
+    return rows.length ? Object.fromEntries(rows.map((row) => [row.field, row.count])) : null
   }
-  const [firstDay, ...otherDays] = dates.map((date) => `game:players:${date}`)
-  pipeline.pfcount(firstDay, ...otherDays)
-  pipeline.zrange('game:top', 0, 9, { rev: true, withScores: true })
-  const results = (await pipeline.exec()) as unknown[]
-  // Per day: rounds, players, players per site, attempts, scores, countries.
-  const per = 5 + GAME_SITES.length
-  const raw: GameDayRaw[] = dates.map((date, index) => {
-    const r = results.slice(index * per, index * per + per)
+  const raw: GameDayRaw[] = dates.map((date) => {
+    const bySite = { n8builds: 0, portfolio: 0 } as Record<GameSite, number>
+    for (const row of players) if (row.day === date && isSite(row.site)) bySite[row.site] = row.players
+    const dayAttempts = attempts.filter((row) => row.day === date)
     return {
       date,
-      rounds: r[0] as GameDayRaw['rounds'],
-      players: num(r[1]),
-      playersBySite: { n8builds: num(r[2]), portfolio: num(r[3]) },
-      attempts: r[2 + GAME_SITES.length] as GameDayRaw['attempts'],
-      scores: r[3 + GAME_SITES.length] as GameDayRaw['scores'],
-      countries: r[4 + GAME_SITES.length] as GameDayRaw['countries'],
+      rounds: hash('game:rounds', date),
+      // A player is counted once a day, whichever sites they played on.
+      players: dayAttempts.length,
+      playersBySite: bySite,
+      attempts: dayAttempts.length ? Object.fromEntries(dayAttempts.map((row) => [row.player, row.rounds])) : null,
+      scores: hash('game:scores', date),
+      countries: hash('game:countries', date),
     }
   })
-  const playerDays = num(results[dates.length * per])
-  const top = parseTop((results[dates.length * per + 1] as (string | number)[]) ?? [])
-  return summarizeGame(raw, top, playerDays)
+  const highScores: HighScore[] = top.flatMap((row) => (isSite(row.site) ? [{ score: row.score, site: row.site, country: row.country || 'XX', date: row.day }] : []))
+  return summarizeGame(raw, highScores, num(playerDays?.n))
 }

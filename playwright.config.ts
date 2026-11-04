@@ -44,7 +44,8 @@ export default defineConfig({
       env: { ADMIN_DEV_BYPASS: '1', ADMIN_TEST_AUTH: '1', ADMIN_E2E_BUILD: '' },
     },
     {
-      command: `node_modules/.bin/next start -p ${APP_PORT}`,
+      // The panels read local D1 databases (wrangler's simulation): create their tables first.
+      command: `node scripts/db-local.mjs && node_modules/.bin/next start -p ${APP_PORT}`,
       url: `http://[::1]:${APP_PORT}/robots.txt`,
       reuseExistingServer: false,
       timeout: 60_000,

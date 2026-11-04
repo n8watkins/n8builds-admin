@@ -8,7 +8,7 @@ import { getDependabotAlerts, getLatestDeployments, getOrgMinutes, getRepoCi, is
 import { getDemoStatus } from './openping'
 import { APPTURNITY_ORG, FREE_ACTIONS_MINUTES, TRACKED_REPOS, shortName } from './repos'
 import { getSentrySummary, sentryConfig } from './sentry'
-import { isStoreConnected, readDailyCounts, readDailyHashTotals } from './store'
+import { isAnalyticsConnected, readDailyCounts, readDailyFieldTotals } from './store'
 
 /**
  * One headline per area for the Overview. It reads only what each headline
@@ -104,8 +104,8 @@ async function traffic(): Promise<Summary> {
 }
 
 async function referrals(): Promise<Summary> {
-  if (!isStoreConnected()) return notConnected('referrals', 'Needs the analytics database and a counter on n8builds.dev')
-  const days = await readDailyHashTotals('ref:techforpros', 30)
+  if (!(await isAnalyticsConnected())) return notConnected('referrals', 'Needs the analytics database and a counter on n8builds.dev')
+  const days = await readDailyFieldTotals('ref:techforpros', 30)
   const total = days.reduce((sum, day) => sum + day.total, 0)
   return total === 0
     ? { area: 'referrals', key: 'referrals', headline: 'No clicks yet', detail: 'None to techforpros.com in 30 days', status: '30 days', tone: 'off' }
@@ -113,8 +113,8 @@ async function referrals(): Promise<Summary> {
 }
 
 async function game(): Promise<Summary> {
-  if (!isStoreConnected()) return notConnected('game', 'Needs the analytics database, also set on n8builds-web')
-  const days = await readDailyHashTotals('game:rounds', 30)
+  if (!(await isAnalyticsConnected())) return notConnected('game', 'Needs the analytics database (n8builds-analytics)')
+  const days = await readDailyFieldTotals('game:rounds', 30)
   const started = days.reduce((sum, day) => sum + Object.entries(day.byField).filter(([field]) => field.startsWith('start:')).reduce((s, [, v]) => s + v, 0), 0)
   return started === 0
     ? { area: 'game', key: 'game', headline: 'No rounds yet', detail: 'Nobody has played the dino game yet', status: 'Waiting', tone: 'off' }
@@ -122,7 +122,7 @@ async function game(): Promise<Summary> {
 }
 
 async function contact(): Promise<Summary> {
-  if (!isStoreConnected()) return notConnected('contact', 'Needs the analytics database and a counter on n8builds.dev')
+  if (!(await isAnalyticsConnected())) return notConnected('contact', 'Needs the analytics database and a counter on n8builds.dev')
   const days = await readDailyCounts('contact:sent', 30)
   const week = days.slice(-7).reduce((sum, day) => sum + day.count, 0)
   return { area: 'contact', key: 'contact', headline: formatNumber(week), detail: 'messages in the last 7 days', status: '7 days', tone: 'quiet' }

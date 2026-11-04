@@ -21,6 +21,8 @@
     "check:deploy": "wrangler deploy --dry-run",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv --strict-vars=false cloudflare-env.d.ts",
     "check:cf-types": "wrangler types --env-interface CloudflareEnv --strict-vars=false --check cloudflare-env.d.ts",
+    "db:migrate": "wrangler d1 migrations apply n8builds-admin --remote",
+    "db:local": "node scripts/db-local.mjs",
     "start": "next start -p 3831",
     "start:e2e": "ADMIN_E2E_BUILD=1 ADMIN_TEST_AUTH=1 next start -p 3831",
     "lint": "eslint . --max-warnings 0",
@@ -37,7 +39,6 @@
   "dependencies": {
     "@opennextjs/cloudflare": "1.20.15",
     "@sentry/nextjs": "11.10.0",
-    "@upstash/redis": "^1.40.0",
     "jose": "^6.2.13",
     "next": "^16.4.3",
     "react": "^19.3.1",

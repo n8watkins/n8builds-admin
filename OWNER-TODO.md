@@ -17,7 +17,7 @@ Done 2026-10-28: the first sign-in, the Sentry token, the analytics Upstash data
 
 **What.**
 The dashboard is deployed as the `n8builds-admin` Worker (DEPLOY.md), but it has only the two secrets an agent could generate (`ADMIN_SESSION_SECRET`, `CRON_SECRET`).
-Vercel hides its values, so the rest come from pass-env or their source accounts: `GITHUB_OAUTH_CLIENT_ID`, `GITHUB_OAUTH_CLIENT_SECRET`, `GITHUB_TOKEN`, `GITHUB_ORG_TOKEN` (both best set straight from section 1's rotation), `GA4_PROPERTY_ID`, `GOOGLE_SA_CLIENT_EMAIL`, `GOOGLE_SA_PRIVATE_KEY`, `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECTS`, `SENTRY_DSN`, `ANALYTICS_REDIS_REST_URL`, `ANALYTICS_REDIS_REST_TOKEN`, and the new `CLOUDFLARE_DEPLOYS_TOKEN` (docs/SETUP.md section 6).
+Vercel hides its values, so the rest come from pass-env or their source accounts: `GITHUB_OAUTH_CLIENT_ID`, `GITHUB_OAUTH_CLIENT_SECRET`, `GITHUB_TOKEN`, `GITHUB_ORG_TOKEN` (both best set straight from section 1's rotation), `GA4_PROPERTY_ID`, `GOOGLE_SA_CLIENT_EMAIL`, `GOOGLE_SA_PRIVATE_KEY`, `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECTS`, `SENTRY_DSN`, and the new `CLOUDFLARE_DEPLOYS_TOKEN` (docs/SETUP.md section 6).
 
 **Steps.**
 

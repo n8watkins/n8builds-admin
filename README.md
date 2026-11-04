@@ -7,6 +7,7 @@ An Overview that puts what needs attention first, a detail page per area (CI, Ac
 - Sign-in is hand-rolled GitHub OAuth (state and PKCE) that admits only the owner's GitHub user ID, with a signed, HttpOnly `__Host-` cookie that lasts 7 days, checked in the proxy, the layout and every route handler.
 - Never indexed, no analytics on the admin itself.
 - Runs on Cloudflare Workers through OpenNext, with the daily snapshot as a Cron Trigger: see [DEPLOY.md](DEPLOY.md).
+- Reads n8builds.dev's D1 databases (the waitlist, the anonymous counters) read-only, and keeps its own snapshot in its own: see [docs/DATABASE.md](docs/DATABASE.md).
 
 Setting up the accounts it reads from: the in-app Setup page, or [docs/SETUP.md](docs/SETUP.md).
 Both come from `lib/setup.ts`; after changing it, run `npm run setup:docs` (a unit test fails if the doc drifts).

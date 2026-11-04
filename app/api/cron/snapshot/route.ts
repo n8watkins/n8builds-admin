@@ -4,13 +4,14 @@ import { ownerFromRequest } from '@/lib/auth/owner'
 import { safeEqual } from '@/lib/auth/tokens'
 import { getOrgMinutes, getPersonalMinutes, getRepo, isGitHubConnected } from '@/lib/github'
 import { TRACKED_REPOS } from '@/lib/repos'
-import { SNAPSHOT_TTL_SECONDS, isStoreConnected, store, utcDate, type Snapshot } from '@/lib/store'
+import { isAdminDbConnected, utcDate, writeSnapshot, type Snapshot } from '@/lib/store'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * The daily snapshot (a Cron Trigger runs it at 06:15 UTC, worker/handlers.ts): stars per repo and
- * this month's Actions minutes, saved as `snapshot:<date>` so the trend panel
+ * this month's Actions minutes, saved in the dashboard's own database
+ * (n8builds-admin, `admin_snapshots`, kept 400 days) so the trend panel
  * can show "+3 stars this week" past GitHub's 14-day windows.
  * The cron calls it with `Authorization: Bearer $CRON_SECRET`; the signed-in
  * owner can also run it by hand. Anyone else gets 401.
@@ -54,9 +55,9 @@ export async function GET(request: NextRequest) {
 }
 
 async function snapshot(done: (status: 'ok' | 'error', problem?: string) => Promise<void>) {
-  if (!isStoreConnected()) {
-    await done('error', 'the analytics database is not connected')
-    return NextResponse.json({ error: 'not-connected', needs: ['ANALYTICS_REDIS_REST_URL', 'ANALYTICS_REDIS_REST_TOKEN'] }, { status: 503 })
+  if (!(await isAdminDbConnected())) {
+    await done('error', 'the admin database is not connected')
+    return NextResponse.json({ error: 'not-connected', needs: ['ADMIN_DB'] }, { status: 503 })
   }
   if (!isGitHubConnected()) {
     await done('error', 'GITHUB_TOKEN is not set')
@@ -73,7 +74,7 @@ async function snapshot(done: (status: 'ok' | 'error', problem?: string) => Prom
     stars: Object.fromEntries(repos.flatMap(([repo, result]) => (result.ok ? [[repo, result.data.stargazers_count]] : []))),
     minutes: { personal: personal.ok ? personal.data.total : null, appturnity: org.ok ? org.data.total : null },
   }
-  await store().set(`snapshot:${snapshot.date}`, snapshot, { ex: SNAPSHOT_TTL_SECONDS })
+  await writeSnapshot(snapshot)
   // A partial snapshot is still saved, but a failed GitHub read (an expired or
   // revoked token, usually) is reported, so the gap in the trends gets noticed.
   const failed = [

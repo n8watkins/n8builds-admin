@@ -4,7 +4,7 @@
  * Every page renders per request (they all read the session), so scripts run
  * only with this request's nonce: no 'unsafe-inline', and 'strict-dynamic'
  * lets Next.js's own scripts load the chunks they need. The browser loads
- * nothing from any other origin (GitHub, Google, Sentry and Upstash are all
+ * nothing from any other origin (GitHub, Google, Sentry and Cloudflare are all
  * called from the server), so everything else is 'self' or nothing.
  * Styles keep 'unsafe-inline' for React style attributes.
  */

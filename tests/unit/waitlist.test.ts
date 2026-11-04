@@ -1,40 +1,46 @@
 import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('server-only', () => ({}))
-const { countByProject, missingFromIndex, projectName, toRow } = await import('@/lib/waitlist')
+const { countByProject, projectName, toRow } = await import('@/lib/waitlist')
 
-const fields = (extra: Record<string, string> = {}) => ({
-  email: 'a@example.com',
-  projects: 'relink,strollz',
-  requested: '',
+const subscriber = (id: string, extra: Partial<Parameters<typeof toRow>[0]> = {}) => ({
+  id,
+  email: `${id}@example.com`,
   note: '42',
-  requestedNote: '',
-  createdAt: '2026-11-01T10:00:00.000Z',
-  updatedAt: '2026-11-01T10:00:00.000Z',
-  confirmedAt: '2026-11-01T10:05:00.000Z',
+  requested_note: '',
   interest: 'relink',
   referrer: 'https://getrelink.dev/',
-  token: 't',
+  created_at: '2026-11-01T10:00:00.000Z',
+  confirmed_at: '2026-11-01T10:05:00.000Z' as string | null,
   ...extra,
 })
+const project = (subscriber_id: string, slug: string, status: 'requested' | 'confirmed' = 'confirmed') => ({ subscriber_id, project: slug, status })
 
 describe('waitlist rows', () => {
-  it('reads an entry hash as written by n8builds-web', () => {
-    expect(toRow('id1', fields())).toMatchObject({ id: 'id1', email: 'a@example.com', projects: ['relink', 'strollz'], requested: [], note: '42' })
-    expect(toRow('id1', null)).toBeNull()
-  })
-
-  it("reads HGETALL's flat field list too (the client's form with deserialization off), and an empty one as gone", () => {
-    expect(toRow('id1', Object.entries(fields()).flat())).toEqual(toRow('id1', fields()))
-    expect(toRow('id1', [])).toBeNull()
+  it("reads a subscriber with its own projects, as n8builds-web writes them", () => {
+    const projects = [project('a', 'relink'), project('a', 'strollz'), project('a', 'vibelog', 'requested'), project('b', 'feelium')]
+    expect(toRow(subscriber('a'), projects)).toEqual({
+      id: 'a',
+      email: 'a@example.com',
+      projects: ['relink', 'strollz'],
+      requested: ['vibelog'],
+      note: '42',
+      requestedNote: '',
+      createdAt: '2026-11-01T10:00:00.000Z',
+      confirmedAt: '2026-11-01T10:05:00.000Z',
+      interest: 'relink',
+      referrer: 'https://getrelink.dev/',
+    })
+    expect(toRow(subscriber('c', { confirmed_at: null }), projects)).toMatchObject({ projects: [], requested: [], confirmedAt: '' })
   })
 
   it('counts only confirmed sign-ups per project', () => {
+    const projects = [project('a', 'relink'), project('a', 'strollz'), project('b', 'vibelog', 'requested'), project('c', 'keysready'), project('d', 'feelium')]
     const rows = [
-      toRow('1', fields())!,
-      toRow('2', fields({ email: 'b@example.com', projects: '', requested: 'vibelog', confirmedAt: '' }))!,
-      toRow('3', fields({ email: 'c@example.com', projects: 'keysready', interest: 'keysready' }))!,
-      toRow('4', fields({ email: 'd@example.com', projects: 'feelium', interest: 'feelium' }))!,
+      toRow(subscriber('a'), projects),
+      toRow(subscriber('b', { confirmed_at: null }), projects),
+      toRow(subscriber('c', { interest: 'keysready' }), projects),
+      toRow(subscriber('d', { interest: 'feelium' }), projects),
     ]
     expect(countByProject(rows).map((c) => [c.slug, c.confirmed, c.emails])).toEqual([
       ['relink', 1, ['a@example.com']],
@@ -52,16 +58,5 @@ describe('waitlist rows', () => {
     expect(projectName('vibelog')).toBe('VibeLog')
     expect(projectName('feelium')).toBe('Feelium')
     expect(projectName('someday')).toBe('someday')
-  })
-
-  it('puts back only entries missing from the index, scored by createdAt, and skips undated ones', () => {
-    const entries = [
-      { id: 'kept', createdAt: '2026-11-01T10:00:00.000Z' },
-      { id: 'lost', createdAt: '2026-11-01T11:00:00.000Z' },
-      { id: 'undated', createdAt: null },
-      { id: 'garbled', createdAt: 'yesterday' },
-    ]
-    expect(missingFromIndex(entries, new Set(['kept']))).toEqual([{ score: Date.parse('2026-11-01T11:00:00.000Z'), member: 'lost' }])
-    expect(missingFromIndex(entries.slice(0, 2), new Set(['kept', 'lost']))).toEqual([])
   })
 })

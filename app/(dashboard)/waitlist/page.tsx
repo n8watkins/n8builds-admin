@@ -2,8 +2,7 @@ import type { Metadata } from 'next'
 import { PageHeader, Panel, NotConnected, PanelError, Stat, errorMessage } from '@/components/ui'
 import { AREAS } from '@/lib/areas'
 import { requireOwner } from '@/lib/auth/owner'
-import { isStoreConnected } from '@/lib/store'
-import { countByProject, projectName as name, readWaitlist, type WaitlistRow } from '@/lib/waitlist'
+import { countByProject, isWaitlistConnected, projectName as name, readWaitlist, type WaitlistRow } from '@/lib/waitlist'
 import { deleteSignup } from './actions'
 
 const area = AREAS.waitlist
@@ -62,13 +61,13 @@ function Row({ row }: { row: WaitlistRow }) {
 }
 
 async function List() {
-  if (!isStoreConnected()) {
+  if (!(await isWaitlistConnected())) {
     return (
       <NotConnected
         why="Shows who joined the waitlist on n8builds.dev/upcoming, and for which projects."
         willShow={['Confirmed sign-ups per project', 'Every entry with its note and source']}
-        needs={['ANALYTICS_REDIS_REST_URL', 'ANALYTICS_REDIS_REST_TOKEN']}
-        setupId="upstash"
+        needs={['WAITLIST_DB (D1 binding)']}
+        setupId="databases"
       />
     )
   }

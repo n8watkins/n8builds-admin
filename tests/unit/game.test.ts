@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('server-only', () => ({}))
-const { parseTop, summarizeGame } = await import('@/lib/game')
+const { summarizeGame } = await import('@/lib/game')
 
 const day = (date: string, extra: Partial<Parameters<typeof summarizeGame>[0][number]> = {}) => ({
   date,
@@ -12,15 +12,6 @@ const day = (date: string, extra: Partial<Parameters<typeof summarizeGame>[0][nu
   scores: null,
   countries: null,
   ...extra,
-})
-
-describe('parseTop', () => {
-  it('reads "site|country|date|id" members with their scores, skipping anything else', () => {
-    expect(parseTop(['portfolio|GB|2026-10-27|ab', 31, 'n8builds|US|2026-10-26|cd', '12', 'junk', 5])).toEqual([
-      { score: 31, site: 'portfolio', country: 'GB', date: '2026-10-27' },
-      { score: 12, site: 'n8builds', country: 'US', date: '2026-10-26' },
-    ])
-  })
 })
 
 describe('summarizeGame', () => {
@@ -44,7 +35,10 @@ describe('summarizeGame', () => {
           countries: { GB: 2 },
         }),
       ],
-      parseTop(['portfolio|GB|2026-10-27|x', 35, 'n8builds|US|2026-10-26|y', 7]),
+      [
+        { score: 35, site: 'portfolio', country: 'GB', date: '2026-10-27' },
+        { score: 7, site: 'n8builds', country: 'US', date: '2026-10-26' },
+      ],
       3
     )
     expect(stats.started).toBe(6)
