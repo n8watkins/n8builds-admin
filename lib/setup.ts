@@ -208,7 +208,7 @@ export const SETUP_ITEMS: SetupItem[] = [
       'The dashboard runs as the `n8builds-admin` Cloudflare Worker (DEPLOY.md), at `https://n8builds-admin.nathancwatkins23.workers.dev` until the domain moves.',
       'Before the first deploy, set every secret on this page with `npx wrangler secret put <NAME>`.',
       'Never set `ADMIN_DEV_BYPASS` or `ADMIN_TEST_AUTH` on the Worker; production builds compile both out, the build fails if either survives, and `APP_ENV=production` switches them off again at runtime.',
-      'Add `CLOUDFLARE_API_TOKEN` (the "Edit Cloudflare Workers" template) as a GitHub Actions secret on the repo, so every push to `main` deploys.',
+      'Add `CLOUDFLARE_API_TOKEN` (a custom token with Workers Scripts, D1 and Workers R2 Storage Edit on the owner\'s account only, DEPLOY.md) as a secret of the repo\'s `production` environment, so every push to `main` deploys.',
       'To move the domain, delete the `admin` CNAME to Vercel in Cloudflare DNS, then add `admin.n8builds.dev` as a custom domain of the Worker.',
       'Open `https://admin.n8builds.dev`, sign in with GitHub, and check that this page shows everything connected.',
       'Optional check: sign in with any other GitHub account and see "This dashboard is private to its owner".',
