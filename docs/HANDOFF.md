@@ -4,7 +4,7 @@
 
 ### What this is
 
-The owner's private dashboard at https://admin.n8builds.dev (Next.js, GitHub sign-in).
+The owner-only dashboard at https://admin.n8builds.dev (Next.js, GitHub sign-in).
 It runs on Cloudflare Workers (DEPLOY.md) at https://n8builds-admin.nathancwatkins23.workers.dev; admin.n8builds.dev still points at Vercel until the owner moves the domain and sets the Worker's secrets (OWNER-TODO.md).
 It isn't listed publicly.
 Setup details: `docs/SETUP.md`.

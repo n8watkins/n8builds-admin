@@ -35,7 +35,7 @@ export const TRACKED_REPOS: TrackedRepo[] = [
   { repo: 'n8watkins/voicedock', label: 'VoiceDock', branch: 'master', site: 'https://n8builds.dev/builds/voicedock' },
   { repo: 'n8watkins/tl-dw', label: 'TL;DW', branch: 'master', site: 'https://n8builds.dev/builds/tldw' },
   { repo: 'n8watkins/tube-vault', label: 'TubeVault', branch: 'master', site: 'https://n8builds.dev/builds/tubevault' },
-  // This dashboard itself (private): its CI, deploys and Dependabot alerts.
+  // This dashboard itself: its CI, deploys and Dependabot alerts.
   { repo: 'n8watkins/n8builds-admin', label: 'Admin dashboard', branch: 'main', worker: 'n8builds-admin', site: 'https://admin.n8builds.dev' },
 ]
 
