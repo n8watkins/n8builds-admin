@@ -28,8 +28,12 @@ vi.mock('@/lib/auth/owner', () => ({ ownerFromRequest: async () => (state.owner 
 
 const { GET } = await import('@/app/api/cron/snapshot/route')
 
-const call = (auth?: string) =>
-  GET(new NextRequest('https://admin.n8builds.dev/api/cron/snapshot', { headers: auth ? { authorization: auth } : {} }))
+const call = (auth?: string, site?: string) =>
+  GET(
+    new NextRequest('https://admin.n8builds.dev/api/cron/snapshot', {
+      headers: { ...(auth ? { authorization: auth } : {}), ...(site ? { 'sec-fetch-site': site } : {}) },
+    }),
+  )
 const statuses = () => sentry.captureCheckIn.mock.calls.map(([checkIn]) => checkIn.status)
 
 describe('the daily snapshot reports to Sentry', () => {
@@ -61,8 +65,17 @@ describe('the daily snapshot reports to Sentry', () => {
 
   it("doesn't check in when the owner runs it by hand, so the monitor tracks the schedule only", async () => {
     state.owner = true
-    expect((await call()).status).toBe(200)
+    expect((await call(undefined, 'none')).status).toBe(200)
     expect(sentry.captureCheckIn).not.toHaveBeenCalled()
+  })
+
+  it("refuses the owner's run when another site's link started it", async () => {
+    state.owner = true
+    for (const site of ['cross-site', 'same-site', undefined]) {
+      expect((await call(undefined, site)).status, String(site)).toBe(403)
+    }
+    expect((await call(undefined, 'same-origin')).status).toBe(200)
+    expect(state.set).toHaveBeenCalledTimes(1)
   })
 
   it('refuses anyone else without touching Sentry', async () => {
