@@ -40,8 +40,18 @@ After changing bindings in `wrangler.jsonc`, run `npm run cf-typegen` to update 
 ## Automatic deploys
 
 `.github/workflows/deploy.yml` builds and deploys on every push to `main`, and on demand from the Actions tab.
-It needs a `CLOUDFLARE_API_TOKEN` repository secret: a Cloudflare API token made from the "Edit Cloudflare Workers" template, limited to the owner's account.
+It needs a `CLOUDFLARE_API_TOKEN` secret in the repository's `production` environment (Settings, Environments), whose deployment branches are limited to `main`.
+Only the migrate and deploy steps receive it, so dependency install scripts and the build never see it; never add it to `ci.yml`, which runs on fork pull requests.
 Until that secret exists, the workflow builds and then skips the deploy with a notice.
+
+The token is a custom Cloudflare API token, not the "Edit Cloudflare Workers" template (which also covers KV, Pages, routes on every zone and more).
+Its permissions, all on the owner's account only:
+
+- Account, Workers Scripts, Edit: upload the Worker and its Cron Trigger.
+- Account, D1, Edit: `npm run db:migrate` on `n8builds-admin`.
+- Account, Workers R2 Storage, Edit: OpenNext fills the `n8builds-admin-opennext-cache` bucket on deploy.
+
+Once admin.n8builds.dev is a Worker custom domain (PR #40), also add Zone, Workers Routes, Edit for the `n8builds.dev` zone, if a deploy reports it can't attach the domain.
 
 ## Deploy by hand
 

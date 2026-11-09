@@ -1,6 +1,11 @@
 # Builds the dashboard with OpenNext and deploys it to Cloudflare Workers (see
 # DEPLOY.md). The build always runs; the deploy step skips with a notice until
-# the CLOUDFLARE_API_TOKEN repository secret exists.
+# the CLOUDFLARE_API_TOKEN secret exists.
+#
+# The token lives in the `production` environment (deployment branches: main
+# only) and is handed only to the two steps that need it, so dependency
+# install scripts and the build never see it. Never add it to ci.yml, which
+# runs on fork pull requests.
 name: Deploy
 
 on:
@@ -20,11 +25,20 @@ concurrency:
 jobs:
   deploy:
     name: Deploy
+    # A fork's push to its own main would build and then skip the deploy (it
+    # has no token); not running at all saves its minutes.
+    if: github.repository == 'n8watkins/n8builds-admin'
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    environment: production
     steps:
+      # Only whether the token exists, never its value.
+      - name: Check for the deploy token
+        id: token
+        env:
+          HAS_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+        run: echo "present=$HAS_TOKEN" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -40,15 +54,19 @@ jobs:
         run: npm run build:worker
 
       - name: Waiting for setup
-        if: env.CLOUDFLARE_API_TOKEN == ''
+        if: steps.token.outputs.present != 'true'
         run: echo "::notice::Built, but skipping the deploy until the CLOUDFLARE_API_TOKEN secret is added (DEPLOY.md)."
 
       # Applies any new file in migrations/admin before the code that needs it
       # goes live; a no-op when the database is current (docs/DATABASE.md).
       - name: Apply database migrations
-        if: env.CLOUDFLARE_API_TOKEN != ''
+        if: steps.token.outputs.present == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: npm run db:migrate
 
       - name: Deploy
-        if: env.CLOUDFLARE_API_TOKEN != ''
+        if: steps.token.outputs.present == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: npx opennextjs-cloudflare deploy
