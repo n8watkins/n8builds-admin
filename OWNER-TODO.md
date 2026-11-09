@@ -58,3 +58,13 @@ Rotating now also resets their expiry; otherwise they stop working on 2027-10-27
 
 **Unblocks.**
 Closes two entries in SECURITY-TODO.md and keeps the GitHub data on the dashboard working for another year.
+
+## Keys
+
+Checked 2026-11-09 against the secret names on the Worker and in GitHub Actions (names only, no values).
+New values go into the owner's pass-env store and are sent with `pass-env pipe <entry> -- <command>`; never commit or paste a value.
+
+- [ ] `GITHUB_TOKEN` ("n8builds-admin read") and `GITHUB_ORG_TOKEN` ("n8builds-admin billing"): leaked in chats Oct 27 to 29. Make new fine-grained PATs, set both on the Worker (neither is there yet), delete the old ones.
+- [ ] `GITHUB_OAUTH_CLIENT_SECRET`, `CLOUDFLARE_DEPLOYS_TOKEN`, `GOOGLE_SA_PRIVATE_KEY` (missing): the code reads them; the Worker lacks them (admin cutover).
+- [ ] `ANALYTICS_REDIS_REST_TOKEN`: Upstash was deleted on 2026-11-04, so this is likely dead code to remove.
+- [x] `ADMIN_SESSION_SECRET`, `CRON_SECRET`: set on the Worker.
