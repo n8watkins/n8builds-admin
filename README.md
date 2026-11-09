@@ -1,6 +1,6 @@
 # n8builds admin
 
-The private owner dashboard for n8builds.dev, served at admin.n8builds.dev.
+The owner-only dashboard for n8builds.dev, served at admin.n8builds.dev: the source is public, the dashboard needs the owner's GitHub sign-in.
 An Overview that puts what needs attention first, a detail page per area (CI, Actions minutes, stars and traffic, releases and deploys, security alerts, live demos, errors, website traffic, Appturnity referrals, contact messages), and a Setup page with each account resource's live status.
 
 - Next.js 16 App Router, TypeScript, Tailwind 4, server components only; each panel fetches on the server (cached 5 minutes) in its own Suspense and error boundary.

@@ -13,7 +13,7 @@ const inter = localFont({
 
 export const metadata: Metadata = {
   title: { default: 'Admin | n8builds', template: '%s | n8builds admin' },
-  description: 'Private owner dashboard for n8builds.dev.',
+  description: 'Owner-only dashboard for n8builds.dev.',
   robots: { index: false, follow: false, nocache: true, googleBot: { index: false, follow: false } },
   referrer: 'no-referrer',
 }

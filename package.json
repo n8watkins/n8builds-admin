@@ -1,7 +1,7 @@
 {
   "name": "n8builds-admin",
   "version": "0.1.0",
-  "description": "Private owner dashboard for n8builds.dev (admin.n8builds.dev).",
+  "description": "Owner-only dashboard for n8builds.dev (admin.n8builds.dev).",
   "private": true,
   "type": "module",
   "license": "UNLICENSED",
