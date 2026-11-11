@@ -41,7 +41,7 @@ function AppStatsCard({ result }: { result: AppStatsResult }) {
               <Meter value={result.stats.tile.meter.value} max={result.stats.tile.meter.limit} label={result.stats.tile.meter.label} />
             </div>
           )}
-          <dl className="mt-5 grid grid-cols-2 gap-x-5 gap-y-2 text-[14px] sm:grid-cols-3">
+          <dl className="mt-5 grid grid-cols-2 gap-x-5 gap-y-2 text-[14px]">
             {result.stats.totals.map((total) => (
               <div key={total.key} className="min-w-0">
                 <dt className="truncate text-slate-400">{total.label}</dt>
