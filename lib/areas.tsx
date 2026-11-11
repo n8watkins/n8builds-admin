@@ -230,7 +230,7 @@ export const AREAS: Record<AreaId, Area> = {
     summary: 'Every app\'s email goes through mailroom: caps, bounces and blocked addresses in one place.',
     about: [
       'mailroom is the one Worker that sends every app\'s email through Cloudflare Email Service, with caps per app and bounce handling. The plan includes 3,000 emails a month, then $0.35 per 1,000.',
-      'Delivered counts come from Cloudflare\'s delivery events, so apps that still send on their own count too. Mail to your own verified inbox is free and has no event, so it is not counted. Today and month are sends through mailroom, which its caps count.',
+      'Delivered counts come from Cloudflare\'s delivery events, so apps that still send on their own count too. Mail to your own verified inbox is free, and Cloudflare does not always report it. Today and month are sends through mailroom, which its caps count.',
       'Addresses are shown masked and no email content is ever stored; every change here is written to an audit log.',
     ],
   },

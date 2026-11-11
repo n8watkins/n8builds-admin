@@ -36,11 +36,42 @@ test.describe('pages', () => {
     })
   }
 
-  test('pages explain themselves: "What this is and why it matters"', async ({ page }) => {
+  test('pages explain themselves: "What this is and why it matters", or About on demand', async ({ page }) => {
     for (const { path } of PAGES.filter((item) => item.path !== '/' && item.path !== '/setup')) {
       await page.goto(path)
-      await expect(page.getByRole('region', { name: 'What this is and why it matters' })).toBeVisible()
+      const about = page.locator('header details > summary').filter({ hasText: 'About' })
+      if ((await about.count()) > 0) {
+        // The compact header: one line, and the facts only once About is opened.
+        await expect(page.getByRole('heading', { level: 1 }).locator('xpath=ancestor::header').getByRole('listitem').first()).toBeHidden()
+        await about.click()
+        await expect(page.getByRole('heading', { level: 1 }).locator('xpath=ancestor::header').getByRole('listitem').first()).toBeVisible()
+      } else {
+        await expect(page.getByRole('region', { name: 'What this is and why it matters' })).toBeVisible()
+      }
     }
+  })
+})
+
+test.describe('mailroom', () => {
+  test('its sections are tabs with their own addresses', async ({ page }) => {
+    await page.goto('/mailroom')
+    const tabs = page.getByRole('navigation', { name: 'Mailroom sections' })
+    await expect(tabs.getByRole('link', { name: 'Overview' })).toHaveAttribute('aria-current', 'page')
+    for (const [name, query, title] of [
+      ['Sends', 'sends', 'Recent sends'],
+      ['Bounces & complaints', 'problems', 'Bounces and complaints'],
+      ['Suppressions', 'suppressions', 'Suppression list'],
+      ['Apps & caps', 'apps', 'Apps and caps'],
+      ['Audit log', 'audit', 'Audit log'],
+    ] as const) {
+      await tabs.getByRole('link', { name: new RegExp(`^${name.replace('&', '\\&')}`) }).click()
+      await expect(page).toHaveURL(new RegExp(`/mailroom\\?tab=${query}$`))
+      await expect(page.getByRole('heading', { level: 2, name: title, exact: true })).toBeVisible()
+      await expect(tabs.getByRole('link', { name: new RegExp(`^${name.replace('&', '\\&')}`) })).toHaveAttribute('aria-current', 'page')
+    }
+    // An unknown tab falls back to the overview.
+    await page.goto('/mailroom?tab=nope')
+    await expect(page.getByRole('heading', { level: 2, name: 'This month at a glance', exact: true })).toBeVisible()
   })
 })
 
