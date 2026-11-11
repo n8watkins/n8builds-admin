@@ -23,7 +23,7 @@ export default async function Page() {
           </ExternalAction>
         }
       />
-      <Panel id="ci" title="Workflows by repo" description="The newest run of each workflow on each repo's main branch. Failing repos come first; each chip opens that run on GitHub.">
+      <Panel id="ci" title="Workflows by repo">
         <Slot rows={9}>
           <CiStatus />
         </Slot>

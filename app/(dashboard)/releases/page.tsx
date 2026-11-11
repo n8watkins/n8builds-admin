@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { MonthActivity } from '@/components/panels/extras'
 import { PreviewDeploys, ProjectReleases } from '@/components/panels/releases'
 import { Slot } from '@/components/Slot'
+import { Tabs, currentTab } from '@/components/Tabs'
 import { ExternalAction, PageHeader, Panel } from '@/components/ui'
 import { AREAS } from '@/lib/areas'
 import { requireOwner } from '@/lib/auth/owner'
@@ -11,33 +12,45 @@ const area = AREAS.releases
 
 export const metadata: Metadata = { title: area.label }
 
-export default async function Page() {
+const TABS = [
+  { id: 'latest', label: 'Latest' },
+  { id: 'month', label: 'This month' },
+  { id: 'previews', label: 'Previews' },
+] as const
+
+export default async function Page({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   // The proxy and the layout check too; every page checks on its own as well.
   await requireOwner()
+  const tab = currentTab(TABS, (await searchParams).tab)
   return (
     <>
       <PageHeader
         area={area}
         actions={<ExternalAction href={`https://dash.cloudflare.com/${CLOUDFLARE_ACCOUNT}/workers-and-pages`} describe="Open your Cloudflare Workers">Cloudflare</ExternalAction>}
       />
-      <div className="space-y-6">
-        <Panel id="projects" title="By project" description="Each build's latest release and what it changed, what has landed since, and its production deploy.">
-          <Slot rows={9}>
-            <ProjectReleases />
-          </Slot>
-        </Panel>
-        <div className="grid gap-6 xl:grid-cols-2">
-          <Panel id="activity" title="This month" description="How much shipped: commits on main branches and releases.">
+      <div className="flex flex-col gap-5">
+        <Tabs label="Releases and deploys sections" path={area.href} tabs={TABS} current={tab.id} />
+        {tab.id === 'latest' && (
+          <Panel id="projects" title="Latest by project">
+            <Slot rows={9}>
+              <ProjectReleases />
+            </Slot>
+          </Panel>
+        )}
+        {tab.id === 'month' && (
+          <Panel id="activity" title="This month">
             <Slot>
               <MonthActivity />
             </Slot>
           </Panel>
-          <Panel id="previews" title="Preview deploys" description="The pull request previews GitHub records (Vercel's, for projects still on it). Folded away unless one failed.">
+        )}
+        {tab.id === 'previews' && (
+          <Panel id="previews" title="Preview deploys">
             <Slot rows={2}>
               <PreviewDeploys />
             </Slot>
           </Panel>
-        </div>
+        )}
       </div>
     </>
   )

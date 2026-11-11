@@ -54,7 +54,7 @@ function Sites() {
 function NavLinks({ setupLeft, onNavigate }: { setupLeft: number; onNavigate?: () => void }) {
   const pathname = usePathname()
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {NAV_GROUPS.map((group, index) => (
         <div key={group.title ?? index}>
           {group.title && <p className="mb-1 px-3 text-[13px] font-semibold text-slate-400">{group.title}</p>}

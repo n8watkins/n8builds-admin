@@ -14,10 +14,8 @@ export default async function Page() {
   await requireOwner()
   return (
     <>
-      <PageHeader
-        area={area}
-      />
-      <Panel id="sentry" title="Sentry issues" description="Unresolved issues across n8builds.dev and the portfolio, newest first.">
+      <PageHeader area={area} />
+      <Panel id="sentry" title="Sentry issues">
         <Slot>
           <SentryPanel />
         </Slot>
