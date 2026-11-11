@@ -1,5 +1,6 @@
 import 'server-only'
 import { mailroomAdmin } from './db'
+import { formatNumber } from './format'
 import type { Fetched } from './github'
 
 /**
@@ -19,11 +20,36 @@ export type EmailUsage = {
   globalToday: number
   globalDayCap: number
   priorityReserve: number
+  /**
+   * mailroom's all-app monthly cap (a rolling 32 UTC days), its hard limit
+   * under the plan's included emails. Missing from a Worker older than it.
+   */
+  globalMonth?: GlobalMonth
+  /** When today's all-app daily cap was reached and alerted (epoch ms), or null. */
+  globalDayCappedAt?: number | null
   monthlyIncluded: number
   accountMonth: number
   otherSenders: { sender: string; sentMonth: number }[]
   suppressions: number
   apps: AppUsage[]
+}
+
+export type GlobalMonth = {
+  /** Sends counted in the window. */
+  used: number
+  cap: number
+  /** The last part of `cap` only sign-in links may use. */
+  priorityReserve: number
+  /** The first day the window counts (UTC, YYYY-MM-DD). */
+  windowStart: string
+  windowDays: number
+  /** `used` at or past this (70% of `cap`) needs attention. */
+  warnAt: number
+  attention: boolean
+  /** When use first crossed `warnAt` (epoch ms), while `attention` holds. */
+  attentionSince: number | null
+  /** The thresholds (70, 85, 95, 100 percent) already alerted in this window, and when. */
+  alerts: { threshold: number; at: number }[]
 }
 
 export type AppUsage = {
@@ -80,6 +106,24 @@ export function monthRows(usage: EmailUsage): { label: string; value: number }[]
   const apps = usage.apps.filter((a) => a.sentMonth > 0).map((a) => ({ label: appName(a.app), value: a.sentMonth }))
   const others = usage.otherSenders.map((o) => ({ label: o.sender, value: o.sentMonth }))
   return [...apps.sort((a, b) => b.value - a.value), ...others]
+}
+
+/** "150 (6%)": a count and its share of a total, "<1%" for a small one that isn't zero. */
+export function withShare(value: number, total: number): string {
+  if (total <= 0) return formatNumber(value)
+  const percent = (value / total) * 100
+  return `${formatNumber(value)} (${value > 0 && percent < 0.5 ? '<1' : Math.round(percent)}%)`
+}
+
+/**
+ * The apps' monthly slices against the all-app cap: what they add up to, what
+ * they sent this month, and the part of the cap no app has (negative when the
+ * slices add up to more). `left` is null without the cap (an older Worker).
+ */
+export function sliceTotals(usage: Pick<EmailUsage, 'apps' | 'globalMonth'>): { slices: number; used: number; left: number | null } {
+  const slices = usage.apps.reduce((sum, a) => sum + a.caps.month, 0)
+  const used = usage.apps.reduce((sum, a) => sum + a.month, 0)
+  return { slices, used, left: usage.globalMonth ? usage.globalMonth.cap - slices : null }
 }
 
 async function read<T>(load: (admin: MailroomAdmin) => Promise<T>): Promise<Fetched<T> | null> {

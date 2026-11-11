@@ -13,8 +13,11 @@ import {
   getProblems,
   getRecentSends,
   getSuppressions,
+  sliceTotals,
+  withShare,
   type AppUsage,
   type EmailUsage,
+  type GlobalMonth,
 } from '@/lib/mailroom'
 import { removeSuppression, setDailyCap, setPaused } from './actions'
 import { ConfirmAction } from './ConfirmAction'
@@ -30,7 +33,7 @@ function MailroomNotConnected() {
   return (
     <NotConnected
       why="Reads mailroom, the Worker that sends every app's email, over the MAILROOM service binding. It is bound on the deployed admin; a local server needs mailroom running under wrangler dev."
-      willShow={['Emails this month per app against the 3,000 included', 'Each app\'s day and month against its caps', 'Recent sends, bounces and the suppression list']}
+      willShow={['Emails this month per app against the 3,000 included', 'The all-app cap of 2,500 and each app\'s slice of it', 'Each app\'s day and month against its caps', 'Recent sends, bounces and the suppression list']}
       needs={['MAILROOM (service binding to mailroom\'s MailroomAdmin)']}
     />
   )
@@ -38,6 +41,11 @@ function MailroomNotConnected() {
 
 const shareTone = (value: number, max: number): Extract<Tone, 'good' | 'warn' | 'bad'> => (max > 0 && value >= max ? 'bad' : max > 0 && value / max >= WARN_SHARE ? 'warn' : 'good')
 const time = (at: number) => new Date(at).toISOString().slice(0, 16).replace('T', ' ')
+/** "Nov 9, 14:02" (UTC). */
+const shortTime = (at: number) => new Date(at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'UTC' })
+/** "Oct 11" from "2026-10-11". */
+const shortDay = (day: string) => new Date(`${day}T00:00:00Z`).toLocaleString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+const countTone = (tone: 'good' | 'warn' | 'bad') => (tone === 'bad' ? 'text-rose-300' : tone === 'warn' ? 'text-amber-200' : 'text-slate-100')
 
 const TILE = 'flex min-w-0 flex-col gap-2 rounded-xl bg-white/[0.03] p-4 ring-1 ring-inset ring-white/[0.06]'
 
@@ -51,6 +59,7 @@ function Overview({ usage }: { usage: EmailUsage }) {
   const countingFrom = usage.eventsSince && usage.eventsSince > Date.parse(usage.monthStart) ? new Date(usage.eventsSince).toISOString().slice(0, 10) : null
   const rows = [...usage.apps].sort((a, b) => b.sentMonth - a.sentMonth || b.today - a.today)
   const maxSent = Math.max(1, ...rows.map((a) => a.sentMonth), ...usage.otherSenders.map((o) => o.sentMonth))
+  const capMonth = usage.globalMonth
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
@@ -63,8 +72,13 @@ function Overview({ usage }: { usage: EmailUsage }) {
             {formatNumber(usage.accountMonth)} <span className="text-[17px] font-normal text-slate-500">/ {formatNumber(usage.monthlyIncluded)}</span>
           </p>
           <Meter value={usage.accountMonth} max={usage.monthlyIncluded} label={`Emails sent in ${month} of the ${usage.monthlyIncluded} included`} />
+          <p className="text-[12px] leading-relaxed text-slate-400">
+            Every sender on the account, as Cloudflare counts it.
+            {usage.globalMonth && ` mailroom stops its apps at ${formatNumber(usage.globalMonth.cap)} so this stays under the ${formatNumber(usage.monthlyIncluded)}.`}
+          </p>
         </div>
-        <div className={TILE}>
+        <GlobalCapTile cap={usage.globalMonth} included={usage.monthlyIncluded} />
+        <div className={cx(TILE, 'xl:col-span-2')}>
           <p className="text-[13px] text-slate-400">Today, all apps</p>
           <p className="font-mono text-[22px] leading-none whitespace-nowrap sm:text-[26px] font-semibold tabular-nums text-slate-50">
             <span className={cx(todayTone === 'bad' ? 'text-rose-300' : todayTone === 'warn' ? 'text-amber-200' : undefined)}>{formatNumber(usage.globalToday)}</span>{' '}
@@ -72,7 +86,7 @@ function Overview({ usage }: { usage: EmailUsage }) {
           </p>
           <p className="text-[12px] text-slate-400">{usage.priorityReserve} kept for sign-in links</p>
         </div>
-        <div className={TILE}>
+        <div className={cx(TILE, 'xl:col-span-2')}>
           <p className="text-[13px] text-slate-400">Trouble, last 30 days</p>
           <p className={cx('font-mono text-[22px] leading-none whitespace-nowrap sm:text-[26px] font-semibold tabular-nums', problems30d > 0 ? 'text-amber-200' : 'text-slate-50')}>{formatNumber(problems30d)}</p>
           <p className="text-[12px] text-slate-400">
@@ -82,12 +96,13 @@ function Overview({ usage }: { usage: EmailUsage }) {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] text-left text-[14px]">
+        <table className="w-full min-w-[720px] text-left text-[14px]">
           <thead className="text-[12px] text-slate-400">
             <tr>
               <th className="pb-2 font-medium">App</th>
               <th className="pb-2 font-medium">Today / cap</th>
-              <th className="pb-2 font-medium">Month / cap</th>
+              <th className="pb-2 font-medium">Month / slice</th>
+              {capMonth && <th className="pb-2 font-medium">Slice of {formatNumber(capMonth.cap)}</th>}
               <th className="w-[34%] pb-2 font-medium">Delivered in {month}</th>
             </tr>
           </thead>
@@ -105,9 +120,10 @@ function Overview({ usage }: { usage: EmailUsage }) {
                     <span className="text-slate-500"> / {formatNumber(app.caps.day)}</span>
                   </td>
                   <td className="py-2 pr-4 font-mono whitespace-nowrap tabular-nums">
-                    <span className="text-slate-100">{formatNumber(app.month)}</span>
+                    <span className={countTone(shareTone(app.month, app.caps.month))}>{formatNumber(app.month)}</span>
                     <span className="text-slate-500"> / {formatNumber(app.caps.month)}</span>
                   </td>
+                  {capMonth && <td className="py-2 pr-4 font-mono whitespace-nowrap text-slate-300 tabular-nums">{withShare(app.caps.month, capMonth.cap)}</td>}
                   <td className="py-2">
                     <ShareBar value={app.sentMonth} max={maxSent} />
                   </td>
@@ -116,7 +132,7 @@ function Overview({ usage }: { usage: EmailUsage }) {
             })}
             {usage.otherSenders.map((other) => (
               <tr key={other.sender} className="border-t border-white/[0.06]">
-                <td className="py-2 pr-4 whitespace-nowrap text-slate-300" colSpan={3}>
+                <td className="py-2 pr-4 whitespace-nowrap text-slate-300" colSpan={capMonth ? 4 : 3}>
                   {other.sender} <span className="text-[12px] text-slate-500">not on mailroom</span>
                 </td>
                 <td className="py-2">
@@ -129,6 +145,7 @@ function Overview({ usage }: { usage: EmailUsage }) {
       </div>
       <p className="text-[12px] leading-relaxed text-slate-400">
         Delivered: Cloudflare&apos;s events{countingFrom ? ` since ${countingFrom}` : ''}. Today and month: sends through mailroom.
+        {capMonth && ` Slice: the part of mailroom's ${formatNumber(capMonth.cap)} a month each app may use.`}
       </p>
     </div>
   )
@@ -145,16 +162,61 @@ function ShareBar({ value, max }: { value: number; max: number }) {
   )
 }
 
+/** mailroom's all-app monthly cap: a rolling window, its alerts, and the part kept for sign-in links. */
+function GlobalCapTile({ cap, included }: { cap: GlobalMonth | undefined; included: number }) {
+  if (!cap) {
+    return (
+      <div className={cx(TILE, 'col-span-2')}>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <p className="text-[13px] text-slate-400">All-app cap, under the {formatNumber(included)} included</p>
+          <StatusPill tone="idle">Not reported</StatusPill>
+        </div>
+        <p className="text-[14px] text-slate-300">This mailroom doesn&apos;t report its monthly cap yet. Deploy the latest mailroom to see it here.</p>
+      </div>
+    )
+  }
+  const reached = cap.used >= cap.cap
+  const tone: Tone = reached ? 'bad' : cap.attention ? 'warn' : 'good'
+  return (
+    <div className={cx(TILE, 'col-span-2')}>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <p className="text-[13px] text-slate-400">All-app cap, last {cap.windowDays} days</p>
+        <StatusPill tone={tone}>
+          {reached ? 'Cap reached' : cap.attention ? `Needs attention${cap.attentionSince ? ` since ${shortDay(new Date(cap.attentionSince).toISOString().slice(0, 10))}` : ''}` : `${formatNumber(cap.cap - cap.used)} left`}
+        </StatusPill>
+      </div>
+      <p className="font-mono text-[22px] leading-none whitespace-nowrap sm:text-[26px] font-semibold tabular-nums text-slate-50">
+        {formatNumber(cap.used)} <span className="text-[17px] font-normal text-slate-500">/ {formatNumber(cap.cap)}</span>
+      </p>
+      <Meter value={cap.used} max={cap.cap} label={`Emails sent through mailroom in the last ${cap.windowDays} days of the ${cap.cap} cap`} />
+      <p className="text-[12px] leading-relaxed text-slate-400">
+        mailroom&apos;s hard cap, {formatNumber(included - cap.cap)} under the {formatNumber(included)} included. Counts since {shortDay(cap.windowStart)}; the last {formatNumber(cap.priorityReserve)} are kept for sign-in links.
+      </p>
+      {cap.alerts.length > 0 ? (
+        <ul aria-label="Alerts sent" className="flex flex-wrap gap-1.5">
+          {cap.alerts.map((alert) => (
+            <li key={alert.threshold} className="rounded-full bg-white/[0.05] px-2.5 py-0.5 text-[12px] whitespace-nowrap text-slate-300">
+              <span className={cx('font-mono font-medium tabular-nums', alert.threshold >= 100 ? 'text-rose-300' : 'text-amber-200')}>{alert.threshold}%</span> alerted {shortTime(alert.at)} UTC
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-[12px] text-slate-500">No alerts sent in this window (at 70, 85, 95 and 100%).</p>
+      )}
+    </div>
+  )
+}
+
 function Count({ value, max, tone }: { value: number; max: number; tone: 'good' | 'warn' | 'bad' }) {
   return (
     <>
-      <span className={cx(tone === 'bad' ? 'text-rose-300' : tone === 'warn' ? 'text-amber-200' : 'text-slate-100')}>{formatNumber(value)}</span>
+      <span className={countTone(tone)}>{formatNumber(value)}</span>
       <span className="text-slate-500"> / {formatNumber(max)}</span>
     </>
   )
 }
 
-function AppRow({ app, globalDayCap }: { app: AppUsage; globalDayCap: number }) {
+function AppRow({ app, globalDayCap, monthCap }: { app: AppUsage; globalDayCap: number; monthCap: number | null }) {
   const name = appName(app.app)
   const problems = [app.bounces30d && `${app.bounces30d} bounced`, app.complaints30d && `${app.complaints30d} complained`, app.failed30d && `${app.failed30d} failed`].filter(Boolean).join(', ')
   return (
@@ -170,6 +232,7 @@ function AppRow({ app, globalDayCap }: { app: AppUsage; globalDayCap: number }) 
       <td className="py-2 pr-4 font-mono whitespace-nowrap tabular-nums">
         <Count value={app.month} max={app.caps.month} tone={shareTone(app.month, app.caps.month)} />
       </td>
+      {monthCap !== null && <td className="py-2 pr-4 font-mono whitespace-nowrap text-slate-300 tabular-nums">{withShare(app.caps.month, monthCap)}</td>}
       <td className={cx('py-2 pr-4 text-[13px] whitespace-nowrap', problems ? 'text-amber-200' : 'text-slate-500')}>{problems || 'None'}</td>
       <td className="py-2">
         <div className="flex justify-end gap-2">
@@ -204,28 +267,61 @@ function AppRow({ app, globalDayCap }: { app: AppUsage; globalDayCap: number }) 
 }
 
 function Apps({ usage }: { usage: EmailUsage }) {
-  const { apps, globalToday, globalDayCap, priorityReserve } = usage
+  const { apps, globalToday, globalDayCap, priorityReserve, globalMonth } = usage
+  const totals = sliceTotals(usage)
+  const today = apps.reduce((sum, a) => sum + a.today, 0)
   return (
     <div className="flex flex-col gap-4">
       <p className="text-[14px] text-slate-400">
-        All apps today: <span className="font-mono text-slate-200 tabular-nums">{formatNumber(globalToday)} / {formatNumber(globalDayCap)}</span>, with {priorityReserve} kept for sign-in links. Pausing or changing a cap asks you to confirm first.
+        All apps today: <span className="font-mono text-slate-200 tabular-nums">{formatNumber(globalToday)} / {formatNumber(globalDayCap)}</span>, with {priorityReserve} kept for sign-in links.
+        {globalMonth && (
+          <>
+            {' '}Last {globalMonth.windowDays} days: <span className="font-mono text-slate-200 tabular-nums">{formatNumber(globalMonth.used)} / {formatNumber(globalMonth.cap)}</span>, with {formatNumber(globalMonth.priorityReserve)} kept.
+          </>
+        )}{' '}
+        Pausing or changing a cap asks you to confirm first.
       </p>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[720px] text-left text-[14px]">
+        <table className="w-full min-w-[840px] text-left text-[14px]">
           <thead className="text-[12px] text-slate-400">
             <tr>
               <th className="pb-2 font-medium">App</th>
               <th className="pb-2 font-medium">Today / cap</th>
-              <th className="pb-2 font-medium">Month / cap</th>
+              <th className="pb-2 font-medium">Month / slice</th>
+              {globalMonth && <th className="pb-2 font-medium">Slice of {formatNumber(globalMonth.cap)}</th>}
               <th className="pb-2 font-medium">Last 30 days</th>
               <th className="pb-2 text-right font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
             {apps.map((app) => (
-              <AppRow key={app.app} app={app} globalDayCap={globalDayCap} />
+              <AppRow key={app.app} app={app} globalDayCap={globalDayCap} monthCap={globalMonth?.cap ?? null} />
             ))}
           </tbody>
+          <tfoot>
+            <tr className="border-t border-white/[0.12] text-slate-300">
+              <th scope="row" className="py-2 pr-4 text-left font-medium whitespace-nowrap">All apps</th>
+              <td className="py-2 pr-4 font-mono whitespace-nowrap tabular-nums">
+                {formatNumber(today)}
+                <span className="text-slate-500"> / {formatNumber(globalDayCap)}</span>
+              </td>
+              <td className="py-2 pr-4 font-mono whitespace-nowrap tabular-nums">
+                {formatNumber(totals.used)}
+                <span className="text-slate-500"> / {formatNumber(totals.slices)}</span>
+              </td>
+              {globalMonth && (
+                <td className="py-2 pr-4 font-mono whitespace-nowrap tabular-nums">
+                  {withShare(totals.slices, globalMonth.cap)}
+                  {totals.left !== null && totals.left !== 0 && (
+                    <span className={cx('ml-2 font-sans text-[12px]', totals.left < 0 ? 'text-rose-300' : 'text-slate-400')}>
+                      {totals.left > 0 ? `${formatNumber(totals.left)} unassigned` : `${formatNumber(-totals.left)} over`}
+                    </span>
+                  )}
+                </td>
+              )}
+              <td colSpan={2} />
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>
