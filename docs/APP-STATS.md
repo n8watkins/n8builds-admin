@@ -1,7 +1,8 @@
 # App stats: one shape for every app's admin numbers
 
 Each app that has its own admin (NetTrailers today; PortfolioRank and the mailroom next) reports a small set of totals to this dashboard in one shared shape.
-The Overview shows one card per app, and every action stays in the app's own admin, which the card links to.
+The Overview's home grid shows one tile per app (from `tile`), and the /apps page shows each app's full card.
+Every action stays in the app's own admin, which the tile and the card link to.
 The TypeScript source of truth is `lib/app-stats.ts` (`AppStats`); keep this page and that file in step.
 
 ## How it connects
@@ -10,7 +11,7 @@ The TypeScript source of truth is `lib/app-stats.ts` (`AppStats`); keep this pag
 - This Worker binds to it in `wrangler.jsonc` under `services`, for example `{ "binding": "NETTRAILERS_ADMIN", "service": "net-trailers", "entrypoint": "AdminStats" }`.
 - A named entrypoint is reachable only through a service binding on the same Cloudflare account: it has no URL, so there is no token to store or rotate, and the public site cannot call it.
 - `APP_SOURCES` in `lib/app-stats.ts` lists each binding with the app's name and admin URL.
-- Before the app has deployed the entrypoint, the card says "Unreachable" with the error, and the rest of the Overview is unaffected.
+- Before the app has deployed the entrypoint, the tile and the card say "Unreachable" with the error, and the rest of the Overview is unaffected.
   A binding missing from this Worker (a local server) shows "Not connected".
   A call that takes over 5 seconds, throws, or answers in another shape shows "Unreachable" too.
 
@@ -46,7 +47,7 @@ type AppStats = {
 }
 ```
 
-- `tile` is the summary for a small tile; the card shows it first, then the fuller `totals`, `jobs`, `errors` and `deploy`.
+- `tile` is what the home grid's tile shows; the full card on /apps shows it first, then the fuller `totals`, `jobs`, `errors` and `deploy`.
 - `tone` is the app's own judgement: `bad` when a job failed or a cap is reached, `warn` for errors or a cap at 70% or more, otherwise `quiet` (or `good` for an explicit all-clear).
 - Keys are stable ids for code (`users`, `email-month`); labels are what people read.
 - Add fields only in a way old readers can ignore; change or remove one only with `schema: 2`.
