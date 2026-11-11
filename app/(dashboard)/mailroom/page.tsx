@@ -128,7 +128,7 @@ function Overview({ usage }: { usage: EmailUsage }) {
         </table>
       </div>
       <p className="text-[12px] leading-relaxed text-slate-400">
-        Delivered counts come from Cloudflare&apos;s delivery events{countingFrom ? `, counted since ${countingFrom}` : ''}, so apps that still send on their own count too. Mail to your own verified inbox is free but counted, so the total is an upper bound. Today and month are sends through mailroom, which its caps count.
+        Delivered counts come from Cloudflare&apos;s delivery events{countingFrom ? `, counted since ${countingFrom}` : ''}, so apps that still send on their own count too. Mail to your own verified inbox is free and Cloudflare reports no event for it, so it is not counted. Today and month are sends through mailroom, which its caps count.
       </p>
     </div>
   )
