@@ -9,6 +9,7 @@
 
 /** The bindings (cloudflare-env.d.ts) plus the secrets this file reads, which may be unset. */
 import { errorSummary, logError, pathOf } from '../lib/log'
+import { healthCheck } from './health'
 
 export type WorkerEnv = CloudflareEnv & { CRON_SECRET?: string; SENTRY_DSN?: string }
 
@@ -36,6 +37,8 @@ export async function runSnapshot(app: FetchHandler, env: WorkerEnv, ctx: Execut
 export function createWorker(app: FetchHandler) {
   return {
     async fetch(request, env, ctx) {
+      const health = healthCheck(request)
+      if (health) return health
       try {
         return await app.fetch(request, env, ctx)
       } catch (err) {
