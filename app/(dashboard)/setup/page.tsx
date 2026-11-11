@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { LuCircleCheck, LuCircleDashed } from 'react-icons/lu'
 import { Inline } from '@/components/Inline'
+import { Tabs, currentTab } from '@/components/Tabs'
 import { Actions, CARD, ExternalAction, PageHeader, StatusPill, cx, type Tone } from '@/components/ui'
 import { AREAS } from '@/lib/areas'
 import { requireOwner } from '@/lib/auth/owner'
@@ -15,49 +16,34 @@ function isSet(name: string): boolean {
   return Boolean(process.env[name]?.trim())
 }
 
-export default async function SetupPage() {
+const TABS = [
+  { id: 'todo', label: 'To do' },
+  { id: 'done', label: 'Done' },
+] as const
+
+export default async function SetupPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   await requireOwner()
-  const items = await allSetupStatuses()
-  const checkable = items.filter(({ status }) => status.state !== 'manual')
+  const tab = currentTab(TABS, (await searchParams).tab)
+  const all = (await allSetupStatuses()).map((entry, index) => ({ ...entry, number: index + 1 }))
+  const checkable = all.filter(({ status }) => status.state !== 'manual')
   const done = checkable.filter(({ status }) => status.state === 'done').length
-  const manual = items.length - checkable.length
+  const manual = all.length - checkable.length
+  const todo = all.filter(({ status }) => status.state !== 'done')
+  const items = tab.id === 'todo' ? todo : all.filter(({ status }) => status.state === 'done')
   return (
     <>
-      <PageHeader
-        area={AREAS.setup}
-        lead={
-          <>
-            Everything to create once so every page shows live data, with each item&apos;s status right now. Put secrets straight into the Cloudflare Worker with <code className="rounded bg-white/[0.07] px-1.5 py-0.5 font-mono text-[0.9em]">npx wrangler secret put</code>, or into <code className="rounded bg-white/[0.07] px-1.5 py-0.5 font-mono text-[0.9em]">.env.local</code>, never into a chat. The same list lives in <code className="rounded bg-white/[0.07] px-1.5 py-0.5 font-mono text-[0.9em]">docs/SETUP.md</code>.
-          </>
-        }
-      />
-
-      <div className={cx(CARD, 'mb-10 p-6 sm:p-7')}>
-        <p className="text-[17px] font-semibold text-slate-50">
-          {done} of {checkable.length} done
-          {manual > 0 && <span className="font-normal text-slate-400">, plus {manual} to confirm in Cloudflare</span>}
-        </p>
-        <ol className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-x-6 gap-y-1 lg:grid-cols-2">
-          {items.map(({ item, status }, index) => (
-            <li key={item.id}>
-              <a href={`#${item.id}`} className="flex items-center gap-3 rounded-lg px-3 py-2 text-[15px] text-slate-200 hover:bg-white/[0.05]">
-                {status.state === 'done' ? <LuCircleCheck aria-hidden className="size-5 shrink-0 text-emerald-300" /> : <LuCircleDashed aria-hidden className={cx('size-5 shrink-0', status.state === 'partial' ? 'text-amber-200' : 'text-slate-500')} />}
-                <span className="min-w-0 truncate">
-                  {index + 1}. {item.title.split(':')[0]}
-                </span>
-                <span className="ml-auto shrink-0 text-[14px] text-slate-400">{status.label}</span>
-              </a>
-            </li>
-          ))}
-        </ol>
+      <PageHeader area={AREAS.setup} lead={`${done} of ${checkable.length} done${manual > 0 ? `, plus ${manual} to confirm in Cloudflare` : ''}.`} />
+      <div className="mb-6">
+        <Tabs label="Setup sections" path="/setup" tabs={TABS} current={tab.id} counts={{ todo: todo.length, done: all.length - todo.length }} />
       </div>
+      {items.length === 0 && <p className="text-[15px] text-slate-400">{tab.id === 'todo' ? 'Nothing left to do.' : 'Nothing done yet.'}</p>}
 
       <ol className="space-y-6">
-        {items.map(({ item, status }, index) => (
+        {items.map(({ item, status, number }) => (
           <li key={item.id} id={item.id} className={cx(CARD, 'scroll-mt-24 p-6 sm:p-8')}>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <h2 className="text-[20px] leading-snug font-semibold text-slate-50">
-                <span className="mr-2 text-slate-400">{index + 1}.</span>
+                <span className="mr-2 text-slate-400">{number}.</span>
                 {item.title}
               </h2>
               <StatusPill tone={PILL[status.state]}>{status.label}</StatusPill>

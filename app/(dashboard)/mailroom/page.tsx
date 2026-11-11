@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { Slot } from '@/components/Slot'
+import { Tabs, currentTab } from '@/components/Tabs'
 import { Meter, NotConnected, PageHeader, Panel, PanelError, StatusPill, cx, type Tone } from '@/components/ui'
 import { AREAS } from '@/lib/areas'
 import { requireOwner } from '@/lib/auth/owner'
@@ -354,49 +354,21 @@ async function Audit() {
 }
 
 const TABS = [
-  { id: 'overview', label: 'Overview', title: 'This month at a glance', description: 'Every app\'s email against the 3,000 the Workers Paid plan includes, and today against the daily caps.' },
-  { id: 'sends', label: 'Sends', title: 'Recent sends', description: 'The last 100 emails through mailroom, newest first. Addresses are masked; no email content is kept.' },
-  { id: 'problems', label: 'Bounces & complaints', title: 'Bounces and complaints', description: 'From Cloudflare\'s delivery events, newest first.' },
-  { id: 'suppressions', label: 'Suppressions', title: 'Suppression list', description: 'Addresses mailroom will not mail: they bounced for good or marked an email as spam.' },
-  { id: 'apps', label: 'Apps & caps', title: 'Apps and caps', description: 'Sent through mailroom today and this month, against each app\'s caps.' },
-  { id: 'audit', label: 'Audit log', title: 'Audit log', description: 'Every change made on this page, with who made it.' },
+  { id: 'overview', label: 'Overview', title: 'This month at a glance' },
+  { id: 'sends', label: 'Sends', title: 'Recent sends' },
+  { id: 'problems', label: 'Bounces & complaints', title: 'Bounces and complaints' },
+  { id: 'suppressions', label: 'Suppressions', title: 'Suppression list' },
+  { id: 'apps', label: 'Apps & caps', title: 'Apps and caps' },
+  { id: 'audit', label: 'Audit log', title: 'Audit log' },
 ] as const
 
 type TabId = (typeof TABS)[number]['id']
-
-function Tabs({ current, counts }: { current: TabId; counts: Partial<Record<TabId, number>> }) {
-  return (
-    <nav aria-label="Mailroom sections" className="-mx-1 overflow-x-auto px-1">
-      <ul className="flex min-w-max gap-1 border-b border-white/[0.08]">
-        {TABS.map((tab) => {
-          const active = tab.id === current
-          const count = counts[tab.id]
-          return (
-            <li key={tab.id}>
-              <Link
-                href={tab.id === 'overview' ? '/mailroom' : `/mailroom?tab=${tab.id}`}
-                aria-current={active ? 'page' : undefined}
-                className={cx(
-                  '-mb-px flex items-center gap-2 border-b-2 px-3.5 py-2.5 text-[14px] font-medium whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-sky-300',
-                  active ? 'border-sky-400 text-slate-50' : 'border-transparent text-slate-400 hover:text-slate-200',
-                )}
-              >
-                {tab.label}
-                {count !== undefined && count > 0 && <span className={cx('rounded-full px-1.5 text-[12px] tabular-nums', active ? 'bg-sky-400/20 text-sky-100' : 'bg-white/[0.08] text-slate-300')}>{count}</span>}
-              </Link>
-            </li>
-          )
-        })}
-      </ul>
-    </nav>
-  )
-}
 
 export default async function Page({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   // The proxy and the layout check too; every page checks on its own as well.
   await requireOwner()
   const params = await searchParams
-  const tab = TABS.find((t) => t.id === params.tab) ?? TABS[0]
+  const tab = currentTab(TABS, params.tab)
   const usage = await getEmailUsage()
   const data = usage?.ok ? usage.data : null
   const counts: Partial<Record<TabId, number>> = data
@@ -404,9 +376,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
     : {}
   return (
     <>
-      <PageHeader area={area} compact />
+      <PageHeader area={area} />
       <div className="flex flex-col gap-5">
-        <Tabs current={tab.id} counts={counts} />
+        <Tabs label="Mailroom sections" path="/mailroom" tabs={TABS} current={tab.id} counts={counts} />
         <Panel id={tab.id} title={tab.title}>
           {!usage ? (
             <MailroomNotConnected />

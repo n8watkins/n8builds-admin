@@ -14,10 +14,8 @@ export default async function Page() {
   await requireOwner()
   return (
     <>
-      <PageHeader
-        area={area}
-      />
-      <Panel id="security" title="Dependabot, by repo" description="Open alerts per repo, most first, with how many are critical or high. Each button opens them on GitHub.">
+      <PageHeader area={area} />
+      <Panel id="security" title="Dependabot, by repo">
         <Slot rows={6}>
           <SecurityAlerts />
         </Slot>

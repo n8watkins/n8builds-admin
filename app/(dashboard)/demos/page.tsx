@@ -14,9 +14,7 @@ export default async function Page() {
   await requireOwner()
   return (
     <>
-      <PageHeader
-        area={area}
-      />
+      <PageHeader area={area} />
       <Panel id="demos" title="The last 30 days" description="One bar per day: green up, amber slow, red down, grey scheduled off.">
         <Slot rows={3}>
           <DemoStatus />

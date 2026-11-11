@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import type { IconType } from 'react-icons'
-import { LuArrowRight, LuChevronDown, LuGithub, LuCircleAlert, LuCircleCheck, LuCircleDashed, LuExternalLink, LuInfo, LuKeyRound, LuPlug, LuTriangleAlert } from 'react-icons/lu'
+import { LuArrowRight, LuGithub, LuCircleAlert, LuCircleCheck, LuCircleDashed, LuExternalLink, LuInfo, LuKeyRound, LuPlug, LuTriangleAlert } from 'react-icons/lu'
 import type { Area } from '@/lib/areas'
 
 /*
@@ -14,7 +14,7 @@ export function cx(...parts: (string | false | null | undefined)[]): string {
   return parts.filter(Boolean).join(' ')
 }
 
-export function AreaIcon({ area, size = 'md' }: { area: Pick<Area, 'icon' | 'accent'>; size?: 'sm' | 'md' | 'lg' }) {
+export function AreaIcon({ area, size = 'md' }: { area: Pick<Area, 'icon' | 'accent'>; size?: 'xs' | 'sm' | 'md' | 'lg' }) {
   const Icon = area.icon
   return (
     <span
@@ -22,9 +22,9 @@ export function AreaIcon({ area, size = 'md' }: { area: Pick<Area, 'icon' | 'acc
       className={cx(
         'inline-grid shrink-0 place-items-center rounded-xl ring-1 ring-inset',
         area.accent.tile,
-        size === 'lg' ? 'size-12' : size === 'md' ? 'size-10' : 'size-8 rounded-lg',
+        size === 'lg' ? 'size-12' : size === 'md' ? 'size-10' : size === 'sm' ? 'size-8 rounded-lg' : 'size-6 rounded-md',
       )}>
-      <Icon className={size === 'lg' ? 'size-6' : size === 'md' ? 'size-5' : 'size-4'} />
+      <Icon className={size === 'lg' ? 'size-6' : size === 'md' ? 'size-5' : size === 'sm' ? 'size-4' : 'size-3.5'} />
     </span>
   )
 }
@@ -164,73 +164,41 @@ export function Panel({
   )
 }
 
-/** A page's heading: icon, title, one-line lead, the "What this is" facts and the main actions. */
-export function PageHeader({ area, lead, actions, compact }: { area: Area; lead?: ReactNode; actions?: ReactNode; compact?: boolean }) {
-  const facts = area.about.map((fact) => (
-    <li key={fact} className="flex gap-3">
-      <span aria-hidden className={cx('mt-2.5 size-1.5 shrink-0 rounded-full', area.accent.bar)} />
-      <span>{fact}</span>
-    </li>
-  ))
-  if (compact) {
-    // One line under the title; the longer explanation opens only when asked for.
-    return (
-      <header className="mb-6">
-        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-          <div className="flex min-w-0 items-center gap-4">
-            <AreaIcon area={area} size="lg" />
-            <h1 className="text-[26px] leading-tight font-semibold tracking-tight text-balance text-slate-50 sm:text-[30px]">{area.label}</h1>
-          </div>
-          {actions && <Actions>{actions}</Actions>}
-        </div>
-        <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <p className="text-[15px] leading-relaxed text-slate-300">{lead ?? area.summary}</p>
-          {area.about.length > 0 && (
-            <details className="group basis-full sm:basis-auto">
-              <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-md text-[14px] font-medium text-slate-400 hover:text-slate-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300 [&::-webkit-details-marker]:hidden">
-                <LuInfo aria-hidden className={cx('size-4', area.accent.text)} />
-                <span className="group-open:hidden">About</span>
-                <span className="hidden group-open:inline">Hide</span>
-              </summary>
-              <ul className="mt-3 max-w-3xl space-y-2 rounded-xl bg-white/[0.025] p-4 text-[14px] leading-relaxed text-slate-300 ring-1 ring-inset ring-white/[0.05]">{facts}</ul>
-            </details>
-          )}
-        </div>
-      </header>
-    )
-  }
+/**
+ * A page's heading: icon, title and the main actions, then one line (the
+ * area's summary, or `lead`). The longer explanation (`area.about`) opens
+ * only on demand, under About, so nothing explanatory takes permanent space.
+ */
+export function PageHeader({ area, lead, actions }: { area: Area; lead?: ReactNode; actions?: ReactNode }) {
   return (
-    <header className="mb-10">
-      {/* One set of actions: beside the title from sm up, under the lead on phones (flex order). */}
-      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
-        <div className="order-1 flex min-w-0 items-center gap-4">
+    <header className="mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+        <div className="flex min-w-0 items-center gap-4">
           <AreaIcon area={area} size="lg" />
           <h1 className="text-[26px] leading-tight font-semibold tracking-tight text-balance text-slate-50 sm:text-[30px]">{area.label}</h1>
         </div>
-        <p className="order-2 max-w-3xl basis-full text-[16px] leading-relaxed text-slate-300 sm:order-3">{lead ?? area.summary}</p>
-        {actions && <Actions className="order-3 sm:order-2">{actions}</Actions>}
+        {actions && <Actions>{actions}</Actions>}
       </div>
-      {area.about.length > 0 && (
-        <>
-          {/* Wide screens: the facts side by side, always visible. */}
-          <section aria-label="What this is and why it matters" className="mt-6 hidden rounded-2xl bg-white/[0.025] p-6 ring-1 ring-inset ring-white/[0.05] lg:block">
-            <p className="flex items-center gap-2 text-[14px] font-semibold text-slate-200">
+      <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <p className="text-[15px] leading-relaxed text-slate-300">{lead ?? area.summary}</p>
+        {area.about.length > 0 && (
+          <details className="group basis-full sm:basis-auto">
+            <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-md text-[14px] font-medium text-slate-400 hover:text-slate-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300 [&::-webkit-details-marker]:hidden">
               <LuInfo aria-hidden className={cx('size-4', area.accent.text)} />
-              What this is and why it matters
-            </p>
-            <ul className="mt-4 grid grid-cols-3 gap-8 text-[15px] leading-relaxed text-slate-300">{facts}</ul>
-          </section>
-          {/* Phones: folded, so the data comes first. */}
-          <details className="group mt-5 rounded-xl bg-white/[0.025] px-5 py-4 ring-1 ring-inset ring-white/[0.05] lg:hidden">
-            <summary className="flex cursor-pointer list-none items-center gap-2 text-[15px] font-semibold text-slate-200 [&::-webkit-details-marker]:hidden">
-              <LuInfo aria-hidden className={cx('size-4', area.accent.text)} />
-              What this is and why it matters
-              <LuChevronDown aria-hidden className="ml-auto size-4 text-slate-400 transition-transform group-open:rotate-180" />
+              <span className="group-open:hidden">About</span>
+              <span className="hidden group-open:inline">Hide</span>
             </summary>
-            <ul className="mt-4 space-y-3 text-[15px] leading-relaxed text-slate-300">{facts}</ul>
+            <ul className="mt-3 max-w-3xl space-y-2 rounded-xl bg-white/[0.025] p-4 text-[14px] leading-relaxed text-slate-300 ring-1 ring-inset ring-white/[0.05]">
+              {area.about.map((fact) => (
+                <li key={fact} className="flex gap-3">
+                  <span aria-hidden className={cx('mt-2 size-1.5 shrink-0 rounded-full', area.accent.bar)} />
+                  <span>{fact}</span>
+                </li>
+              ))}
+            </ul>
           </details>
-        </>
-      )}
+        )}
+      </div>
     </header>
   )
 }
@@ -248,11 +216,11 @@ export function Stat({ label, value, hint, tone }: { label: string; value: React
 }
 
 /** A horizontal meter, e.g. minutes used of the free 2,000. */
-export function Meter({ value, max, label }: { value: number; max: number; label: string }) {
+export function Meter({ value, max, label, size = 'md' }: { value: number; max: number; label: string; size?: 'sm' | 'md' }) {
   const share = Math.min(1, max > 0 ? value / max : 0)
   const tone = share >= 1 ? 'bg-rose-400' : share >= 0.7 ? 'bg-amber-300' : 'bg-cyan-400'
   return (
-    <div role="meter" aria-label={label} aria-valuenow={Math.round(value)} aria-valuemin={0} aria-valuemax={max} className="h-3 w-full overflow-hidden rounded-full bg-white/[0.07]">
+    <div role="meter" aria-label={label} aria-valuenow={Math.round(value)} aria-valuemin={0} aria-valuemax={max} className={cx('w-full overflow-hidden rounded-full bg-white/[0.07]', size === 'sm' ? 'h-1.5' : 'h-3')}>
       <div className={cx('h-full rounded-full', tone)} style={{ width: `${Math.max(share * 100, value > 0 ? 1.5 : 0)}%` }} />
     </div>
   )

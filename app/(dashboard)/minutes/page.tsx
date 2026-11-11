@@ -14,16 +14,14 @@ export default async function Page() {
   await requireOwner()
   return (
     <>
-      <PageHeader
-        area={area}
-      />
-      <div className="grid gap-6 xl:grid-cols-5">
-        <Panel id="org" title="Appturnity org" description="Billed to the Appturnity organization. Its private monorepo-app uses these minutes." className="xl:col-span-3">
+      <PageHeader area={area} />
+      <div className="grid gap-6 lg:grid-cols-5">
+        <Panel id="org" title="Appturnity org" className="lg:col-span-3">
           <Slot>
             <OrgMinutes />
           </Slot>
         </Panel>
-        <Panel id="personal" title="Your personal account" description="The n8watkins account. The n8builds repos are public, so they use none of it." className="xl:col-span-2">
+        <Panel id="personal" title="Your personal account" className="lg:col-span-2">
           <Slot rows={3}>
             <PersonalMinutes />
           </Slot>

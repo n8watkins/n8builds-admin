@@ -1,7 +1,7 @@
 # n8builds admin
 
 The owner-only dashboard for n8builds.dev, served at admin.n8builds.dev: the source is public, the dashboard needs the owner's GitHub sign-in.
-An Overview that puts what needs attention first, a detail page per area (CI, Actions minutes, stars and traffic, releases and deploys, security alerts, live demos, errors, website traffic, Appturnity referrals, contact messages), and a Setup page with each account resource's live status.
+An Overview with what needs attention as one row of chips and a small tile per section, grouped like the sidebar; a compact page per area (CI, Actions minutes, stars and traffic, releases and deploys, security alerts, live demos, errors, website traffic, mailroom, Tech for Pros referrals, contact messages, the dino game, the waitlist), with tabs where a page has several sections; and a Setup page with each account resource's live status.
 
 - Next.js 16 App Router, TypeScript, Tailwind 4, server components only; each panel fetches on the server (cached 5 minutes) in its own Suspense and error boundary.
 - Sign-in is hand-rolled GitHub OAuth (state and PKCE) that admits only the owner's GitHub user ID, with a signed, HttpOnly `__Host-` cookie that lasts 7 days, checked in the proxy, the layout and every route handler.

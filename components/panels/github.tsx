@@ -1,4 +1,4 @@
-import { LuGithub } from 'react-icons/lu'
+import { LuGithub, LuInfo } from 'react-icons/lu'
 import { formatNumber, timeAgo } from '@/lib/format'
 import {
   getClones,
@@ -275,12 +275,16 @@ export async function RepoStats() {
           </li>
         ))}
       </ul>
-      <div className="rounded-xl bg-white/[0.03] p-5 text-[15px] leading-relaxed text-slate-300 ring-1 ring-inset ring-white/[0.05]">
-        <p className="font-semibold text-slate-100">Why views, not clones</p>
-        <p className="mt-1.5">
+      {/* The explanation opens on demand, like a page's About. */}
+      <details className="group text-[14px] leading-relaxed text-slate-300">
+        <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-md font-medium text-slate-400 hover:text-slate-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300 [&::-webkit-details-marker]:hidden">
+          <LuInfo aria-hidden className="size-4 text-yellow-200" />
+          Why views, not clones
+        </summary>
+        <p className="mt-3 max-w-3xl rounded-xl bg-white/[0.025] p-4 ring-1 ring-inset ring-white/[0.05]">
           Views (in brackets: different people) are visits to the repo&apos;s page on GitHub, so they are people looking. Clones ({formatNumber(clones)} in 14 days) count every <code className="font-mono text-[0.9em]">git clone</code>: GitHub Actions checking out the code for CI, Vercel, Render and Firebase builds, Dependabot, and your own machines. GitHub doesn&apos;t say who cloned, so thousands of clones on a repo with busy CI (like Solara) are almost certainly automation, not people.
         </p>
-      </div>
+      </details>
     </div>
   )
 }
