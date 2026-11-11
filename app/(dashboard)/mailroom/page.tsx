@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { Slot } from '@/components/Slot'
-import { BarList, Meter, NotConnected, PageHeader, Panel, PanelError, Stat, StatusPill, cx, type Tone } from '@/components/ui'
+import { Meter, NotConnected, PageHeader, Panel, PanelError, StatusPill, cx, type Tone } from '@/components/ui'
 import { AREAS } from '@/lib/areas'
 import { requireOwner } from '@/lib/auth/owner'
 import { formatNumber, timeAgo } from '@/lib/format'
@@ -12,7 +13,6 @@ import {
   getProblems,
   getRecentSends,
   getSuppressions,
-  monthRows,
   type AppUsage,
   type EmailUsage,
 } from '@/lib/mailroom'
@@ -39,37 +39,118 @@ function MailroomNotConnected() {
 const shareTone = (value: number, max: number): Extract<Tone, 'good' | 'warn' | 'bad'> => (max > 0 && value >= max ? 'bad' : max > 0 && value / max >= WARN_SHARE ? 'warn' : 'good')
 const time = (at: number) => new Date(at).toISOString().slice(0, 16).replace('T', ' ')
 
-function ThisMonth({ usage }: { usage: EmailUsage }) {
+const TILE = 'flex min-w-0 flex-col gap-2 rounded-xl bg-white/[0.03] p-4 ring-1 ring-inset ring-white/[0.06]'
+
+/** The dense summary: four tiles, then one compact row per app. */
+function Overview({ usage }: { usage: EmailUsage }) {
   const month = new Date(usage.generatedAt).toLocaleString('en-US', { month: 'long', timeZone: 'UTC' })
   const over = usage.accountMonth > usage.monthlyIncluded
   const tone = shareTone(usage.accountMonth, usage.monthlyIncluded)
-  const rows = monthRows(usage)
+  const todayTone = shareTone(usage.globalToday, usage.globalDayCap)
+  const problems30d = usage.apps.reduce((sum, a) => sum + a.bounces30d + a.complaints30d, 0)
   const countingFrom = usage.eventsSince && usage.eventsSince > Date.parse(usage.monthStart) ? new Date(usage.eventsSince).toISOString().slice(0, 10) : null
+  const rows = [...usage.apps].sort((a, b) => b.sentMonth - a.sentMonth || b.today - a.today)
+  const maxSent = Math.max(1, ...rows.map((a) => a.sentMonth), ...usage.otherSenders.map((o) => o.sentMonth))
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <Stat label={`Sent in ${month}`} value={`${formatNumber(usage.accountMonth)} / ${formatNumber(usage.monthlyIncluded)}`} tone={tone === 'good' ? undefined : tone} hint="emails, all apps" />
-        <StatusPill tone={tone}>{over ? `${formatNumber(usage.accountMonth - usage.monthlyIncluded)} over: $0.35 per 1,000` : `${formatNumber(usage.monthlyIncluded - usage.accountMonth)} included emails left`}</StatusPill>
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <div className={cx(TILE, 'col-span-2')}>
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <p className="text-[13px] text-slate-400">Sent in {month}, all apps</p>
+            <StatusPill tone={tone}>{over ? `${formatNumber(usage.accountMonth - usage.monthlyIncluded)} over: $0.35 per 1,000` : `${formatNumber(usage.monthlyIncluded - usage.accountMonth)} included left`}</StatusPill>
+          </div>
+          <p className="font-mono text-[22px] leading-none whitespace-nowrap sm:text-[26px] font-semibold tabular-nums text-slate-50">
+            {formatNumber(usage.accountMonth)} <span className="text-[17px] font-normal text-slate-500">/ {formatNumber(usage.monthlyIncluded)}</span>
+          </p>
+          <Meter value={usage.accountMonth} max={usage.monthlyIncluded} label={`Emails sent in ${month} of the ${usage.monthlyIncluded} included`} />
+        </div>
+        <div className={TILE}>
+          <p className="text-[13px] text-slate-400">Today, all apps</p>
+          <p className="font-mono text-[22px] leading-none whitespace-nowrap sm:text-[26px] font-semibold tabular-nums text-slate-50">
+            <span className={cx(todayTone === 'bad' ? 'text-rose-300' : todayTone === 'warn' ? 'text-amber-200' : undefined)}>{formatNumber(usage.globalToday)}</span>{' '}
+            <span className="text-[17px] font-normal text-slate-500">/ {formatNumber(usage.globalDayCap)}</span>
+          </p>
+          <p className="text-[12px] text-slate-400">{usage.priorityReserve} kept for sign-in links</p>
+        </div>
+        <div className={TILE}>
+          <p className="text-[13px] text-slate-400">Trouble, last 30 days</p>
+          <p className={cx('font-mono text-[22px] leading-none whitespace-nowrap sm:text-[26px] font-semibold tabular-nums', problems30d > 0 ? 'text-amber-200' : 'text-slate-50')}>{formatNumber(problems30d)}</p>
+          <p className="text-[12px] text-slate-400">
+            bounces and complaints, {formatNumber(usage.suppressions)} suppressed
+          </p>
+        </div>
       </div>
-      <Meter value={usage.accountMonth} max={usage.monthlyIncluded} label={`Emails sent in ${month} of the ${usage.monthlyIncluded} included`} />
-      {rows.length === 0 ? <p className="text-[15px] text-slate-400">No email delivered yet this month.</p> : <BarList rows={rows} format={formatNumber} />}
-      <p className="text-[13px] leading-relaxed text-slate-400">
-        Delivered or bounced messages from Cloudflare&apos;s events{countingFrom ? `, counted since ${countingFrom}` : ''}. Mail to your own verified inbox is free and still counted, so this is an upper bound.
+
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[640px] text-left text-[14px]">
+          <thead className="text-[12px] text-slate-400">
+            <tr>
+              <th className="pb-2 font-medium">App</th>
+              <th className="pb-2 font-medium">Today / cap</th>
+              <th className="pb-2 font-medium">Month / cap</th>
+              <th className="w-[34%] pb-2 font-medium">Delivered in {month}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((app) => {
+              const dayTone = shareTone(app.today, app.caps.day)
+              return (
+                <tr key={app.app} className="border-t border-white/[0.06]">
+                  <td className="py-2 pr-4 whitespace-nowrap text-slate-100">
+                    {appName(app.app)}
+                    {app.paused && <span className="ml-2 rounded-full bg-amber-300/15 px-2 py-0.5 text-[12px] text-amber-200">Paused</span>}
+                  </td>
+                  <td className="py-2 pr-4 font-mono whitespace-nowrap tabular-nums">
+                    <span className={cx(dayTone === 'bad' ? 'text-rose-300' : dayTone === 'warn' ? 'text-amber-200' : 'text-slate-100')}>{formatNumber(app.today)}</span>
+                    <span className="text-slate-500"> / {formatNumber(app.caps.day)}</span>
+                  </td>
+                  <td className="py-2 pr-4 font-mono whitespace-nowrap tabular-nums">
+                    <span className="text-slate-100">{formatNumber(app.month)}</span>
+                    <span className="text-slate-500"> / {formatNumber(app.caps.month)}</span>
+                  </td>
+                  <td className="py-2">
+                    <ShareBar value={app.sentMonth} max={maxSent} />
+                  </td>
+                </tr>
+              )
+            })}
+            {usage.otherSenders.map((other) => (
+              <tr key={other.sender} className="border-t border-white/[0.06]">
+                <td className="py-2 pr-4 whitespace-nowrap text-slate-300" colSpan={3}>
+                  {other.sender} <span className="text-[12px] text-slate-500">not on mailroom</span>
+                </td>
+                <td className="py-2">
+                  <ShareBar value={other.sentMonth} max={maxSent} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-[12px] leading-relaxed text-slate-400">
+        Delivered counts come from Cloudflare&apos;s delivery events{countingFrom ? `, counted since ${countingFrom}` : ''}, so apps that still send on their own count too. Mail to your own verified inbox is free but counted, so the total is an upper bound. Today and month are sends through mailroom, which its caps count.
       </p>
     </div>
   )
 }
 
-function Figure({ label, value, max, tone, note }: { label: string; value: number; max?: number; tone?: 'good' | 'warn' | 'bad'; note?: string }) {
+function ShareBar({ value, max }: { value: number; max: number }) {
   return (
-    <div className="min-w-[6.5rem]">
-      <p className="text-[12px] text-slate-400">{label}</p>
-      <p className="mt-0.5 font-mono text-[14px] tabular-nums">
-        <span className={cx(tone === 'bad' ? 'text-rose-300' : tone === 'warn' ? 'text-amber-200' : 'text-slate-100')}>{formatNumber(value)}</span>
-        {max !== undefined && <span className="text-slate-500"> / {formatNumber(max)}</span>}
-      </p>
-      {note && <p className="text-[12px] text-slate-400">{note}</p>}
+    <div className="flex items-center gap-3">
+      <div aria-hidden className="h-2 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+        <div className="h-full rounded-full bg-sky-400/80" style={{ width: `${Math.max((value / max) * 100, value > 0 ? 2 : 0)}%` }} />
+      </div>
+      <span className="w-14 text-right font-mono text-[13px] tabular-nums text-slate-200">{formatNumber(value)}</span>
     </div>
+  )
+}
+
+function Count({ value, max, tone }: { value: number; max: number; tone: 'good' | 'warn' | 'bad' }) {
+  return (
+    <>
+      <span className={cx(tone === 'bad' ? 'text-rose-300' : tone === 'warn' ? 'text-amber-200' : 'text-slate-100')}>{formatNumber(value)}</span>
+      <span className="text-slate-500"> / {formatNumber(max)}</span>
+    </>
   )
 }
 
@@ -77,21 +158,21 @@ function AppRow({ app, globalDayCap }: { app: AppUsage; globalDayCap: number }) 
   const name = appName(app.app)
   const problems = [app.bounces30d && `${app.bounces30d} bounced`, app.complaints30d && `${app.complaints30d} complained`, app.failed30d && `${app.failed30d} failed`].filter(Boolean).join(', ')
   return (
-    <li className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3 py-4">
-      <div className="w-full min-w-0 sm:w-40">
-        <p className="flex items-center gap-2 font-medium text-slate-100">
-          {name}
-          {app.paused && <StatusPill tone="warn">Paused</StatusPill>}
-        </p>
-        <p className={cx('mt-0.5 text-[13px]', problems ? 'text-amber-200' : 'text-slate-500')}>{problems ? `${problems} in 30 days` : 'No bounces in 30 days'}</p>
-      </div>
-      <div className="flex flex-1 flex-wrap gap-x-6 gap-y-2">
-        <Figure label="Today" value={app.today} max={app.caps.day} tone={shareTone(app.today, app.caps.day)} note={app.caps.day !== app.defaultDayCap ? `default cap ${app.defaultDayCap}` : undefined} />
-        <Figure label="This month" value={app.month} max={app.caps.month} tone={shareTone(app.month, app.caps.month)} />
-        <Figure label="Delivered" value={app.sentMonth} note="this month" />
-      </div>
-      <div>
-        <div className="flex flex-wrap gap-2">
+    <tr className="border-t border-white/[0.06] align-middle">
+      <td className="py-2 pr-4 whitespace-nowrap text-slate-100">
+        {name}
+        {app.paused && <span className="ml-2 rounded-full bg-amber-300/15 px-2 py-0.5 text-[12px] text-amber-200">Paused</span>}
+      </td>
+      <td className="py-2 pr-4 font-mono whitespace-nowrap tabular-nums">
+        <Count value={app.today} max={app.caps.day} tone={shareTone(app.today, app.caps.day)} />
+        {app.caps.day !== app.defaultDayCap && <span className="ml-2 font-sans text-[12px] text-slate-400">default {app.defaultDayCap}</span>}
+      </td>
+      <td className="py-2 pr-4 font-mono whitespace-nowrap tabular-nums">
+        <Count value={app.month} max={app.caps.month} tone={shareTone(app.month, app.caps.month)} />
+      </td>
+      <td className={cx('py-2 pr-4 text-[13px] whitespace-nowrap', problems ? 'text-amber-200' : 'text-slate-500')}>{problems || 'None'}</td>
+      <td className="py-2">
+        <div className="flex justify-end gap-2">
           <ConfirmAction
             action={setPaused}
             label={app.paused ? 'Resume' : 'Pause'}
@@ -117,33 +198,36 @@ function AppRow({ app, globalDayCap }: { app: AppUsage; globalDayCap: number }) 
             number={{ name: 'cap', label: 'Emails a day', value: app.caps.day, min: 0, max: globalDayCap, resetLabel: app.caps.day !== app.defaultDayCap ? `Put back the default (${app.defaultDayCap})` : undefined }}
           />
         </div>
-      </div>
-    </li>
+      </td>
+    </tr>
   )
 }
 
-async function Usage() {
-  const usage = await getEmailUsage()
-  if (!usage) return <MailroomNotConnected />
-  if (!usage.ok) return <PanelError message={usage.message} />
-  return <ThisMonth usage={usage.data} />
-}
-
-async function Apps() {
-  const usage = await getEmailUsage()
-  if (!usage) return <MailroomNotConnected />
-  if (!usage.ok) return <PanelError message={usage.message} />
-  const { apps, globalToday, globalDayCap, priorityReserve } = usage.data
+function Apps({ usage }: { usage: EmailUsage }) {
+  const { apps, globalToday, globalDayCap, priorityReserve } = usage
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
       <p className="text-[14px] text-slate-400">
-        All apps today: <span className="font-mono text-slate-200 tabular-nums">{formatNumber(globalToday)} / {formatNumber(globalDayCap)}</span>, with {priorityReserve} kept for sign-in links.
+        All apps today: <span className="font-mono text-slate-200 tabular-nums">{formatNumber(globalToday)} / {formatNumber(globalDayCap)}</span>, with {priorityReserve} kept for sign-in links. Pausing or changing a cap asks you to confirm first.
       </p>
-      <ul className="-my-4 divide-y divide-white/[0.06]">
-        {apps.map((app) => (
-          <AppRow key={app.app} app={app} globalDayCap={globalDayCap} />
-        ))}
-      </ul>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[720px] text-left text-[14px]">
+          <thead className="text-[12px] text-slate-400">
+            <tr>
+              <th className="pb-2 font-medium">App</th>
+              <th className="pb-2 font-medium">Today / cap</th>
+              <th className="pb-2 font-medium">Month / cap</th>
+              <th className="pb-2 font-medium">Last 30 days</th>
+              <th className="pb-2 text-right font-medium">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {apps.map((app) => (
+              <AppRow key={app.app} app={app} globalDayCap={globalDayCap} />
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
@@ -151,7 +235,7 @@ async function Apps() {
 const STATUS_TONE: Record<string, string> = { sent: 'text-emerald-300', failed: 'text-rose-300', pending: 'text-sky-300' }
 
 async function RecentSends() {
-  const sends = await getRecentSends(50)
+  const sends = await getRecentSends(100)
   if (!sends) return <MailroomNotConnected />
   if (!sends.ok) return <PanelError message={sends.message} />
   if (sends.data.length === 0) return <p className="text-[15px] text-slate-400">No app sends through mailroom yet.</p>
@@ -269,42 +353,77 @@ async function Audit() {
   )
 }
 
-export default async function Page() {
+const TABS = [
+  { id: 'overview', label: 'Overview', title: 'This month at a glance', description: 'Every app\'s email against the 3,000 the Workers Paid plan includes, and today against the daily caps.' },
+  { id: 'sends', label: 'Sends', title: 'Recent sends', description: 'The last 100 emails through mailroom, newest first. Addresses are masked; no email content is kept.' },
+  { id: 'problems', label: 'Bounces & complaints', title: 'Bounces and complaints', description: 'From Cloudflare\'s delivery events, newest first.' },
+  { id: 'suppressions', label: 'Suppressions', title: 'Suppression list', description: 'Addresses mailroom will not mail: they bounced for good or marked an email as spam.' },
+  { id: 'apps', label: 'Apps & caps', title: 'Apps and caps', description: 'Sent through mailroom today and this month, against each app\'s caps.' },
+  { id: 'audit', label: 'Audit log', title: 'Audit log', description: 'Every change made on this page, with who made it.' },
+] as const
+
+type TabId = (typeof TABS)[number]['id']
+
+function Tabs({ current, counts }: { current: TabId; counts: Partial<Record<TabId, number>> }) {
+  return (
+    <nav aria-label="Mailroom sections" className="-mx-1 overflow-x-auto px-1">
+      <ul className="flex min-w-max gap-1 border-b border-white/[0.08]">
+        {TABS.map((tab) => {
+          const active = tab.id === current
+          const count = counts[tab.id]
+          return (
+            <li key={tab.id}>
+              <Link
+                href={tab.id === 'overview' ? '/mailroom' : `/mailroom?tab=${tab.id}`}
+                aria-current={active ? 'page' : undefined}
+                className={cx(
+                  '-mb-px flex items-center gap-2 border-b-2 px-3.5 py-2.5 text-[14px] font-medium whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-sky-300',
+                  active ? 'border-sky-400 text-slate-50' : 'border-transparent text-slate-400 hover:text-slate-200',
+                )}
+              >
+                {tab.label}
+                {count !== undefined && count > 0 && <span className={cx('rounded-full px-1.5 text-[12px] tabular-nums', active ? 'bg-sky-400/20 text-sky-100' : 'bg-white/[0.08] text-slate-300')}>{count}</span>}
+              </Link>
+            </li>
+          )
+        })}
+      </ul>
+    </nav>
+  )
+}
+
+export default async function Page({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   // The proxy and the layout check too; every page checks on its own as well.
   await requireOwner()
+  const params = await searchParams
+  const tab = TABS.find((t) => t.id === params.tab) ?? TABS[0]
+  const usage = await getEmailUsage()
+  const data = usage?.ok ? usage.data : null
+  const counts: Partial<Record<TabId, number>> = data
+    ? { problems: data.apps.reduce((sum, a) => sum + a.bounces30d + a.complaints30d, 0), suppressions: data.suppressions }
+    : {}
   return (
     <>
       <PageHeader area={area} />
-      <div className="grid gap-6 xl:grid-cols-5">
-        <Panel id="month" title="This month" description="Every app's email against the 3,000 the Workers Paid plan includes." className="xl:col-span-2">
-          <Slot rows={5}>
-            <Usage />
-          </Slot>
-        </Panel>
-        <Panel id="problems" title="Bounces and complaints" description="From Cloudflare's delivery events, newest first." className="xl:col-span-3">
-          <Slot rows={4}>
-            <Problems />
-          </Slot>
-        </Panel>
-        <Panel id="sends" title="Recent sends" description="The last 50 emails through mailroom. Addresses are masked; no email content is kept." className="xl:col-span-5">
-          <Slot rows={6}>
-            <RecentSends />
-          </Slot>
-        </Panel>
-        <Panel id="apps" title="Apps and caps" description="Sent through mailroom today and this month, against each app's caps. Pause an app or change its daily cap here." className="xl:col-span-5">
-          <Slot rows={6}>
-            <Apps />
-          </Slot>
-        </Panel>
-        <Panel id="suppressions" title="Suppression list" description="Addresses mailroom will not mail: they bounced for good or marked an email as spam." className="xl:col-span-3">
-          <Slot rows={3}>
-            <Suppressions />
-          </Slot>
-        </Panel>
-        <Panel id="audit" title="Audit log" description="Every change made here, with who made it." className="xl:col-span-2">
-          <Slot rows={3}>
-            <Audit />
-          </Slot>
+      <div className="flex flex-col gap-5">
+        <Tabs current={tab.id} counts={counts} />
+        <Panel id={tab.id} title={tab.title} description={tab.description}>
+          {!usage ? (
+            <MailroomNotConnected />
+          ) : !usage.ok ? (
+            <PanelError message={usage.message} />
+          ) : tab.id === 'overview' ? (
+            <Overview usage={usage.data} />
+          ) : tab.id === 'apps' ? (
+            <Apps usage={usage.data} />
+          ) : (
+            <Slot rows={6}>
+              {tab.id === 'sends' && <RecentSends />}
+              {tab.id === 'problems' && <Problems />}
+              {tab.id === 'suppressions' && <Suppressions />}
+              {tab.id === 'audit' && <Audit />}
+            </Slot>
+          )}
         </Panel>
       </div>
     </>
