@@ -36,7 +36,13 @@ export interface D1Database {
 /** n8builds-web's WaitlistAdmin entrypoint (its worker/index.js), over the service binding. */
 export type WaitlistWriter = { deleteSubscriber(id: string): Promise<boolean> }
 
-type Env = { WAITLIST_DB?: D1Database; ANALYTICS_DB?: D1Database; ADMIN_DB?: D1Database; WAITLIST_ADMIN?: WaitlistWriter }
+type Env = {
+  WAITLIST_DB?: D1Database
+  ANALYTICS_DB?: D1Database
+  ADMIN_DB?: D1Database
+  WAITLIST_ADMIN?: WaitlistWriter
+  MAILROOM?: import('./mailroom').MailroomAdmin
+}
 
 const LOCAL = Symbol.for('n8builds-admin.localCloudflareEnv')
 type WithLocal = typeof globalThis & { [LOCAL]?: Promise<Env> }
@@ -113,4 +119,9 @@ export async function adminDb(): Promise<D1Database | null> {
 
 export async function waitlistWriter(): Promise<WaitlistWriter | null> {
   return (await cloudflareEnv())?.WAITLIST_ADMIN ?? null
+}
+
+/** mailroom's MailroomAdmin entrypoint, for the Mailroom page; null where it isn't bound. */
+export async function mailroomAdmin(): Promise<import('./mailroom').MailroomAdmin | null> {
+  return (await cloudflareEnv())?.MAILROOM ?? null
 }

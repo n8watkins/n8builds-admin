@@ -5,6 +5,7 @@ import { REVALIDATE_SECONDS } from './cache'
 import { formatNumber } from './format'
 import { ga4Config, getTraffic } from './ga4'
 import { getDependabotAlerts, getLatestDeployments, getOrgMinutes, getRepoCi, isGitHubConnected, type WorkflowRun } from './github'
+import { appName, getEmailUsage, monthRows } from './mailroom'
 import { getDemoStatus } from './openping'
 import { APPTURNITY_ORG, FREE_ACTIONS_MINUTES, TRACKED_REPOS, shortName } from './repos'
 import { getSentrySummary, sentryConfig } from './sentry'
@@ -69,6 +70,21 @@ async function minutes(): Promise<Summary> {
   if (share >= 1) return { ...base, detail: `${APPTURNITY_ORG} has used all its free minutes this month`, status: 'Used up', tone: 'bad' }
   if (share >= 0.7) return { ...base, detail: `${APPTURNITY_ORG} has used ${Math.round(share * 100)}% this month`, status: 'Running low', tone: 'warn' }
   return { ...base, detail: `${APPTURNITY_ORG} minutes used this month`, status: 'Fine', tone: 'quiet' }
+}
+
+async function mailroom(): Promise<Summary> {
+  const usage = await getEmailUsage()
+  if (!usage) return notConnected('mailroom', 'Needs the MAILROOM service binding')
+  if (!usage.ok) return { area: 'mailroom', key: 'mailroom', headline: 'Unavailable', detail: usage.message, status: 'Error', tone: 'warn' }
+  const { accountMonth, monthlyIncluded, apps } = usage.data
+  const share = monthlyIncluded > 0 ? accountMonth / monthlyIncluded : 0
+  const busiest = monthRows(usage.data).slice(0, 3).map((row) => `${row.label} ${formatNumber(row.value)}`).join(', ')
+  const paused = apps.filter((app) => app.paused).map((app) => appName(app.app))
+  const base = { area: 'mailroom' as const, key: 'mailroom', headline: `${formatNumber(accountMonth)} / ${formatNumber(monthlyIncluded)}` }
+  if (share >= 1) return { ...base, detail: `Over the included emails: $0.35 per 1,000. ${busiest}`, status: 'Over', tone: 'bad' }
+  if (paused.length > 0) return { ...base, detail: `Paused: ${paused.join(', ')}`, status: 'Paused', tone: 'warn' }
+  if (share >= 0.7) return { ...base, detail: `${Math.round(share * 100)}% of this month's emails used. ${busiest}`, status: 'Running low', tone: 'warn' }
+  return { ...base, detail: busiest ? `Emails this month: ${busiest}` : 'No email delivered yet this month', status: 'Fine', tone: 'quiet' }
 }
 
 async function demos(): Promise<Summary> {
@@ -188,6 +204,7 @@ const SOURCES: [AreaId, string, () => Promise<Summary>][] = [
   ['demos', 'demos', cachedSource('demos', demos)],
   ['errors', 'errors', cachedSource('errors', errors)],
   ['traffic', 'traffic', cachedSource('traffic', traffic)],
+  ['mailroom', 'mailroom', cachedSource('mailroom', mailroom)],
   ['referrals', 'referrals', cachedSource('referrals', referrals)],
   ['contact', 'contact', cachedSource('contact', contact)],
   ['game', 'game', cachedSource('game', game)],

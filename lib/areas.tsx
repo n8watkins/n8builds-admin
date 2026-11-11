@@ -10,6 +10,7 @@ import {
   LuMail,
   LuMousePointerClick,
   LuRocket,
+  LuSend,
   LuShieldCheck,
   LuStar,
   LuTimer,
@@ -50,6 +51,7 @@ export type AreaId =
   | 'referrals'
   | 'game'
   | 'contact'
+  | 'mailroom'
   | 'waitlist'
   | 'setup'
 
@@ -219,6 +221,19 @@ export const AREAS: Record<AreaId, Area> = {
       'Only a daily number is stored, never the message.',
     ],
   },
+  mailroom: {
+    id: 'mailroom',
+    href: '/mailroom',
+    label: 'Mailroom',
+    icon: LuSend,
+    accent: accent.sky,
+    summary: 'Every app\'s email goes through mailroom: caps, bounces and blocked addresses in one place.',
+    about: [
+      'mailroom is the one Worker that sends every app\'s email through Cloudflare Email Service, with caps per app and bounce handling. The plan includes 3,000 emails a month, then $0.35 per 1,000.',
+      'Delivered counts come from Cloudflare\'s delivery events, so apps that still send on their own count too. Mail to your own verified inbox is free, and Cloudflare does not always report it. Today and month are sends through mailroom, which its caps count.',
+      'Addresses are shown masked and no email content is ever stored; every change here is written to an audit log.',
+    ],
+  },
   waitlist: {
     id: 'waitlist',
     href: '/waitlist',
@@ -246,7 +261,7 @@ export const AREAS: Record<AreaId, Area> = {
 export const NAV_GROUPS: { title?: string; areas: AreaId[] }[] = [
   { areas: ['overview'] },
   { title: 'GitHub', areas: ['ci', 'minutes', 'repos', 'releases', 'security'] },
-  { title: 'Sites', areas: ['demos', 'errors', 'traffic'] },
+  { title: 'Sites', areas: ['demos', 'errors', 'traffic', 'mailroom'] },
   { title: 'Counters', areas: ['referrals', 'contact', 'game'] },
   { title: 'People', areas: ['waitlist'] },
   { areas: ['setup'] },
