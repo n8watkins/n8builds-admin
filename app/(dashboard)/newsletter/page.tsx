@@ -17,7 +17,7 @@ export const dynamic = 'force-dynamic'
 function digestPill(digest: Digest, now: number): { tone: Tone; label: string } {
   if (digest.status === 'sent') return { tone: 'good', label: 'Sent' }
   if (digest.status === 'skipped') return { tone: 'idle', label: 'Skipped' }
-  return isStuck(digest, now) ? { tone: 'warn', label: 'Stuck sending' } : { tone: 'running', label: 'Sending' }
+  return isStuck(digest, now) ? { tone: 'warn', label: 'Stalled' } : { tone: 'running', label: 'Sending' }
 }
 
 const SUBSCRIBER: Record<SubscriberStatus, { tone: Tone; label: string }> = {
@@ -53,9 +53,9 @@ function StuckBanner({ digest }: { digest: Digest }) {
     <div role="status" className="flex items-start gap-3 rounded-xl bg-amber-300/[0.08] p-4 text-[15px] text-amber-100 ring-1 ring-inset ring-amber-300/25">
       <LuTriangleAlert aria-hidden className="mt-0.5 size-5 shrink-0 text-amber-200" />
       <p>
-        <span className="font-semibold">The digest of {shortDate(digest.createdAt)} is still sending</span>{' '}
+        <span className="font-semibold">The digest of {shortDate(digest.createdAt)} has stopped sending</span>{' '}
         <span className="text-amber-100/80">
-          ({formatNumber(digest.delivered)} of {formatNumber(digest.recipients)} delivered, started {shortDateTime(digest.createdAt)}).
+          ({formatNumber(digest.delivered)} of {formatNumber(digest.recipients)} delivered; {digest.lastSentAt ? `last delivery ${shortDateTime(digest.lastSentAt)}` : `none since it started ${shortDateTime(digest.createdAt)}`}).
           {digest.note ? ` ${digest.note}` : ' The next cron run resumes it; if it stays stuck, check mailroom.'}
         </span>
       </p>

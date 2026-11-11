@@ -38,6 +38,7 @@ const digest = (extra: Partial<Parameters<typeof toDigest>[0]> = {}) =>
     note: '',
     finished_at: '2026-11-09T14:20:00.000Z',
     delivered: 12,
+    last_sent_at: '2026-11-09T14:20:00.000Z',
     ...extra,
   })
 
@@ -57,12 +58,17 @@ describe('newsletter formatting', () => {
     expect(subscriberStatus(null, at - 1, at)).toBe('expired')
   })
 
-  it("calls a digest stuck only when it is still 'sending' over an hour after it started", () => {
-    const started = (ms: number) => new Date(at - ms).toISOString()
-    expect(isStuck({ status: 'sending', createdAt: started(HOUR + 1000) }, at)).toBe(true)
-    expect(isStuck({ status: 'sending', createdAt: started(HOUR - 1000) }, at)).toBe(false)
-    expect(isStuck({ status: 'sent', createdAt: started(5 * HOUR) }, at)).toBe(false)
-    expect(isStuck({ status: 'skipped', createdAt: started(5 * HOUR) }, at)).toBe(false)
+  it("calls a digest stuck only when it is still 'sending' and has had no delivery for 26 hours", () => {
+    const ago = (ms: number) => new Date(at - ms).toISOString()
+    // A long list over several daily runs: started 2 days ago, delivered within the last day.
+    expect(isStuck({ status: 'sending', createdAt: ago(48 * HOUR), lastSentAt: ago(20 * HOUR) }, at)).toBe(false)
+    // No delivery for 27 hours.
+    expect(isStuck({ status: 'sending', createdAt: ago(50 * HOUR), lastSentAt: ago(27 * HOUR) }, at)).toBe(true)
+    // No delivery yet: measured from the start.
+    expect(isStuck({ status: 'sending', createdAt: ago(25 * HOUR), lastSentAt: '' }, at)).toBe(false)
+    expect(isStuck({ status: 'sending', createdAt: ago(27 * HOUR), lastSentAt: '' }, at)).toBe(true)
+    expect(isStuck({ status: 'sent', createdAt: ago(100 * HOUR), lastSentAt: ago(99 * HOUR) }, at)).toBe(false)
+    expect(isStuck({ status: 'skipped', createdAt: ago(100 * HOUR), lastSentAt: '' }, at)).toBe(false)
   })
 
   it('describes a digest in a few words, in Pacific time', () => {
@@ -82,8 +88,11 @@ describe('newsletter formatting', () => {
       tone: 'quiet',
     })
     expect(tileSummary({ counts, digests: [], subscribers: [] }, at).detail).toBe('confirmed, 3 pending; no digest yet')
-    const stuck = digest({ status: 'sending', delivered: 4, finished_at: null, created_at: new Date(at - 2 * HOUR).toISOString() })
-    expect(tileSummary({ counts, digests: [stuck, digest({ id: 0 })], subscribers: [] }, at)).toMatchObject({ status: 'Digest stuck sending', tone: 'warn', detail: 'Nov 11 digest still sending, 4 of 12 delivered' })
+    const sending = { status: 'sending' as const, delivered: 4, finished_at: null, created_at: new Date(at - 48 * HOUR).toISOString() }
+    const moving = digest({ ...sending, last_sent_at: new Date(at - 20 * HOUR).toISOString() })
+    expect(tileSummary({ counts, digests: [moving, digest({ id: 0 })], subscribers: [] }, at)).toMatchObject({ status: 'Fine', tone: 'quiet', detail: 'confirmed, 3 pending; digest Nov 9: sending, 4 of 12' })
+    const stalled = digest({ ...sending, last_sent_at: new Date(at - 27 * HOUR).toISOString() })
+    expect(tileSummary({ counts, digests: [stalled, digest({ id: 0 })], subscribers: [] }, at)).toMatchObject({ status: 'Digest stalled', tone: 'warn', detail: 'Nov 9 digest stalled since Nov 10, 4 of 12 delivered' })
   })
 })
 
@@ -121,11 +130,20 @@ describe('reading the newsletter', () => {
     const data = await readNewsletter(NOW)
     if (data === 'no-tables') throw new Error('expected the tables')
     expect(data.counts).toEqual({ confirmed: 2, pending: 1, expired: 1 })
-    expect(data.digests.map((d) => [d.id, d.status, d.recipients, d.delivered, d.posts, d.note])).toEqual([
-      [2, 'sending', 2, 1, ['A post'], ''],
-      [1, 'skipped', 2, 0, ['A post'], 'Skipped: past the monthly budget.'],
+    expect(data.digests.map((d) => [d.id, d.status, d.recipients, d.delivered, d.lastSentAt, d.posts, d.note])).toEqual([
+      [2, 'sending', 2, 1, '2026-11-09T14:16:00.000Z', ['A post'], ''],
+      [1, 'skipped', 2, 0, '', ['A post'], 'Skipped: past the monthly budget.'],
     ])
-    expect(tileSummary(data, at)).toMatchObject({ headline: '2', tone: 'warn' })
+    // Its only delivery was over two days ago: stalled.
+    expect(tileSummary(data, at)).toMatchObject({ headline: '2', tone: 'warn', status: 'Digest stalled' })
+  })
+
+  it('reads the newest delivery, so a digest still moving is not stalled', async () => {
+    await dbs.waitlist.prepare('INSERT INTO newsletter_deliveries (digest_id, subscriber_id, sent_at) VALUES (2, ?, ?)').bind('b'.repeat(32), new Date(at - 3 * HOUR).toISOString()).run()
+    const data = await readNewsletter(NOW)
+    if (data === 'no-tables') throw new Error('expected the tables')
+    expect(data.digests[0]).toMatchObject({ delivered: 2, lastSentAt: new Date(at - 3 * HOUR).toISOString() })
+    expect(tileSummary(data, at)).toMatchObject({ tone: 'quiet', status: 'Fine' })
   })
 
   it('masks every address in the query and never reads a token', async () => {

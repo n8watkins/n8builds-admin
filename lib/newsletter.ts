@@ -17,8 +17,12 @@ import { formatNumber } from '@/lib/format'
 
 export const TABLES = ['newsletter_subscribers', 'newsletter_digests', 'newsletter_deliveries'] as const
 
-/** A digest still sending this long after it started needs a look. */
-export const STUCK_AFTER_MS = 60 * 60 * 1000
+/**
+ * A sending digest with no delivery for this long needs a look. n8builds-web
+ * sends at most 30 a run (its RUN_LIMIT) and runs daily, so a long list
+ * legitimately sends over several days; 26 hours is a missed daily run plus slack.
+ */
+export const STUCK_AFTER_MS = 26 * 60 * 60 * 1000
 
 /** Digests and subscribers the page lists. */
 export const DIGEST_LIMIT = 26
@@ -43,6 +47,8 @@ export type Digest = {
   recipients: number
   /** Deliveries recorded so far. */
   delivered: number
+  /** The newest delivery's sent_at; empty before the first. */
+  lastSentAt: string
   /** The post titles it carries, newest first as stored; null when the JSON can't be read. */
   posts: string[] | null
   note: string
@@ -89,9 +95,12 @@ export function subscriberStatus(confirmedAt: string | null, expiresAt: number |
   return expiresAt !== null && expiresAt <= now ? 'expired' : 'pending'
 }
 
-/** A digest still 'sending' more than an hour after it started. */
-export function isStuck(digest: Pick<Digest, 'status' | 'createdAt'>, now: number): boolean {
-  return digest.status === 'sending' && now - Date.parse(digest.createdAt) > STUCK_AFTER_MS
+/** When a digest last moved: its newest delivery, or its start before the first. */
+export const lastProgress = (digest: Pick<Digest, 'createdAt' | 'lastSentAt'>) => digest.lastSentAt || digest.createdAt
+
+/** A digest still 'sending' with no delivery for STUCK_AFTER_MS (26 hours): not just slow, stopped. */
+export function isStuck(digest: Pick<Digest, 'status' | 'createdAt' | 'lastSentAt'>, now: number): boolean {
+  return digest.status === 'sending' && now - Date.parse(lastProgress(digest)) > STUCK_AFTER_MS
 }
 
 const DAY = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'America/Los_Angeles' })
@@ -118,7 +127,7 @@ export function tileSummary(data: Newsletter, now: number): { headline: string; 
   const headline = formatNumber(confirmed)
   const stuck = data.digests.find((digest) => isStuck(digest, now))
   if (stuck) {
-    return { headline, detail: `${shortDate(stuck.createdAt)} digest still sending, ${formatNumber(stuck.delivered)} of ${formatNumber(stuck.recipients)} delivered`, status: 'Digest stuck sending', tone: 'warn' }
+    return { headline, detail: `${shortDate(stuck.createdAt)} digest stalled since ${shortDate(lastProgress(stuck))}, ${formatNumber(stuck.delivered)} of ${formatNumber(stuck.recipients)} delivered`, status: 'Digest stalled', tone: 'warn' }
   }
   const last = data.digests[0]
   return { headline, detail: `confirmed, ${formatNumber(pending)} pending; ${last ? `digest ${digestLine(last)}` : 'no digest yet'}`, status: 'Fine', tone: 'quiet' }
@@ -131,7 +140,7 @@ async function hasTables(db: ReadOnlyDb): Promise<boolean> {
 }
 
 type CountsRow = { confirmed: number | null; pending: number | null; expired: number | null }
-type DigestRow = { id: number; created_at: string; posts_since: string; posts: string; status: DigestStatus; recipients: number; note: string; finished_at: string | null; delivered: number }
+type DigestRow = { id: number; created_at: string; posts_since: string; posts: string; status: DigestStatus; recipients: number; note: string; finished_at: string | null; delivered: number; last_sent_at: string | null }
 type SubscriberRow = { address: string; created_at: string; confirmed_at: string | null; expires_at: number | null }
 
 export function toDigest(row: DigestRow): Digest {
@@ -142,6 +151,7 @@ export function toDigest(row: DigestRow): Digest {
     status: row.status,
     recipients: row.recipients,
     delivered: row.delivered,
+    lastSentAt: row.last_sent_at ?? '',
     posts: postTitles(row.posts),
     note: row.note,
     finishedAt: row.finished_at ?? '',
@@ -169,7 +179,8 @@ export async function readNewsletter(now = new Date()): Promise<Newsletter | 'no
     ),
     db.all<DigestRow>(
       `SELECT g.id, g.created_at, g.posts_since, g.posts, g.status, g.recipients, g.note, g.finished_at,
-              (SELECT COUNT(*) FROM newsletter_deliveries d WHERE d.digest_id = g.id) AS delivered
+              (SELECT COUNT(*) FROM newsletter_deliveries d WHERE d.digest_id = g.id) AS delivered,
+              (SELECT MAX(sent_at) FROM newsletter_deliveries d WHERE d.digest_id = g.id) AS last_sent_at
        FROM newsletter_digests g ORDER BY g.id DESC LIMIT ?`,
       DIGEST_LIMIT
     ),

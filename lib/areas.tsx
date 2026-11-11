@@ -263,6 +263,7 @@ export const AREAS: Record<AreaId, Area> = {
     about: [
       'Readers sign up on n8builds.dev\'s blog and confirm by email (double opt-in); an unconfirmed address expires after 7 days.',
       'A weekly digest goes out when a post was published since the last one, sent through mailroom in small batches; a week that would go past the newsletter\'s monthly email budget is skipped, with the reason.',
+      'A long list sends over several days (up to 30 emails a daily run); a digest with no delivery for 26 hours counts as stalled and needs attention.',
       'Every digest has an unsubscribe link that deletes the address. Addresses are shown masked, and links\' tokens are never read.',
       'Stored in n8builds-waitlist beside the waitlist, which n8builds-web writes and this dashboard only reads.',
     ],
