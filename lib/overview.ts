@@ -12,6 +12,7 @@ import { APPTURNITY_ORG, FREE_ACTIONS_MINUTES, TRACKED_REPOS, shortName } from '
 import { getSentrySummary, sentryConfig } from './sentry'
 import { allSetupStatuses } from './setup-status'
 import { isAnalyticsConnected, readDailyCounts, readDailyFieldTotals } from './store'
+import { readNewsletter, tileSummary } from './newsletter'
 import { isWaitlistConnected, readWaitlist } from './waitlist'
 
 /**
@@ -176,6 +177,14 @@ async function waitlist(): Promise<Summary> {
   return { area: 'waitlist', key: 'waitlist', headline: formatNumber(confirmed), detail: `confirmed, ${formatNumber(rows.length - confirmed)} waiting`, status: 'Fine', tone: 'quiet' }
 }
 
+async function newsletter(): Promise<Summary> {
+  if (!(await isWaitlistConnected())) return notConnected('newsletter', 'Needs the waitlist database', 'databases')
+  const now = new Date()
+  const data = await readNewsletter(now)
+  if (data === 'no-tables') return { area: 'newsletter', key: 'newsletter', headline: 'Not live yet', detail: 'Its tables aren\'t in n8builds-waitlist yet', status: 'Not live yet', tone: 'quiet' }
+  return { area: 'newsletter', key: 'newsletter', ...tileSummary(data, now.getTime()) }
+}
+
 async function setup(): Promise<Summary> {
   const items = await allSetupStatuses()
   const checkable = items.filter(({ status }) => status.state !== 'manual')
@@ -217,8 +226,9 @@ const SOURCES: [AreaId, string, () => Promise<Summary>][] = [
   ['referrals', 'referrals', cachedSource('referrals', referrals)],
   ['contact', 'contact', cachedSource('contact', contact)],
   ['game', 'game', cachedSource('game', game)],
-  // Local reads, never cached: the waitlist holds people's addresses, and Setup reads this server's own configuration.
+  // Local reads, never cached: the waitlist and the newsletter hold people's addresses, and Setup reads this server's own configuration.
   ['waitlist', 'waitlist', waitlist],
+  ['newsletter', 'newsletter', newsletter],
   ['setup', 'setup', setup],
 ]
 

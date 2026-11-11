@@ -10,6 +10,7 @@ import {
   LuListPlus,
   LuMail,
   LuMousePointerClick,
+  LuNewspaper,
   LuRocket,
   LuSend,
   LuShieldCheck,
@@ -54,6 +55,7 @@ export type AreaId =
   | 'contact'
   | 'mailroom'
   | 'waitlist'
+  | 'newsletter'
   | 'apps'
   | 'setup'
 
@@ -251,6 +253,21 @@ export const AREAS: Record<AreaId, Area> = {
       'Stored in its own database, n8builds-waitlist, which n8builds-web writes and this dashboard only reads.',
     ],
   },
+  newsletter: {
+    id: 'newsletter',
+    href: '/newsletter',
+    label: 'Newsletter',
+    icon: LuNewspaper,
+    accent: accent.indigo,
+    summary: 'Who gets new N8\'s Notions posts by email, and each weekly digest.',
+    about: [
+      'Readers sign up on n8builds.dev\'s blog and confirm by email (double opt-in); an unconfirmed address expires after 7 days.',
+      'A weekly digest goes out when a post was published since the last one, sent through mailroom in small batches; a week that would go past the newsletter\'s monthly email budget is skipped, with the reason.',
+      'A long list sends over several days (up to 30 emails a daily run); a digest with no delivery for 26 hours counts as stalled and needs attention.',
+      'Every digest has an unsubscribe link that deletes the address. Addresses are shown masked, and links\' tokens are never read.',
+      'Stored in n8builds-waitlist beside the waitlist, which n8builds-web writes and this dashboard only reads.',
+    ],
+  },
   apps: {
     id: 'apps',
     href: '/apps',
@@ -286,7 +303,7 @@ export const NAV_GROUPS: { title?: string; areas: AreaId[] }[] = [
   // Apps sits beside Sites, and keeps the Overview's five-wide rows full (Sites 4 + Apps 1).
   { title: 'Apps', areas: ['apps'] },
   { title: 'Counters', areas: ['referrals', 'contact', 'game'] },
-  { title: 'People', areas: ['waitlist'] },
+  { title: 'People', areas: ['waitlist', 'newsletter'] },
   { areas: ['setup'] },
 ]
 
