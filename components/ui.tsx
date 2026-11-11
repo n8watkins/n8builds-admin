@@ -165,13 +165,40 @@ export function Panel({
 }
 
 /** A page's heading: icon, title, one-line lead, the "What this is" facts and the main actions. */
-export function PageHeader({ area, lead, actions }: { area: Area; lead?: ReactNode; actions?: ReactNode }) {
+export function PageHeader({ area, lead, actions, compact }: { area: Area; lead?: ReactNode; actions?: ReactNode; compact?: boolean }) {
   const facts = area.about.map((fact) => (
     <li key={fact} className="flex gap-3">
       <span aria-hidden className={cx('mt-2.5 size-1.5 shrink-0 rounded-full', area.accent.bar)} />
       <span>{fact}</span>
     </li>
   ))
+  if (compact) {
+    // One line under the title; the longer explanation opens only when asked for.
+    return (
+      <header className="mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+          <div className="flex min-w-0 items-center gap-4">
+            <AreaIcon area={area} size="lg" />
+            <h1 className="text-[26px] leading-tight font-semibold tracking-tight text-balance text-slate-50 sm:text-[30px]">{area.label}</h1>
+          </div>
+          {actions && <Actions>{actions}</Actions>}
+        </div>
+        <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <p className="text-[15px] leading-relaxed text-slate-300">{lead ?? area.summary}</p>
+          {area.about.length > 0 && (
+            <details className="group basis-full sm:basis-auto">
+              <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-md text-[14px] font-medium text-slate-400 hover:text-slate-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300 [&::-webkit-details-marker]:hidden">
+                <LuInfo aria-hidden className={cx('size-4', area.accent.text)} />
+                <span className="group-open:hidden">About</span>
+                <span className="hidden group-open:inline">Hide</span>
+              </summary>
+              <ul className="mt-3 max-w-3xl space-y-2 rounded-xl bg-white/[0.025] p-4 text-[14px] leading-relaxed text-slate-300 ring-1 ring-inset ring-white/[0.05]">{facts}</ul>
+            </details>
+          )}
+        </div>
+      </header>
+    )
+  }
   return (
     <header className="mb-10">
       {/* One set of actions: beside the title from sm up, under the lead on phones (flex order). */}

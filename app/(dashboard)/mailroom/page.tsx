@@ -128,7 +128,7 @@ function Overview({ usage }: { usage: EmailUsage }) {
         </table>
       </div>
       <p className="text-[12px] leading-relaxed text-slate-400">
-        Delivered counts come from Cloudflare&apos;s delivery events{countingFrom ? `, counted since ${countingFrom}` : ''}, so apps that still send on their own count too. Mail to your own verified inbox is free and Cloudflare reports no event for it, so it is not counted. Today and month are sends through mailroom, which its caps count.
+        Delivered: Cloudflare&apos;s events{countingFrom ? ` since ${countingFrom}` : ''}. Today and month: sends through mailroom.
       </p>
     </div>
   )
@@ -404,10 +404,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
     : {}
   return (
     <>
-      <PageHeader area={area} />
+      <PageHeader area={area} compact />
       <div className="flex flex-col gap-5">
         <Tabs current={tab.id} counts={counts} />
-        <Panel id={tab.id} title={tab.title} description={tab.description}>
+        <Panel id={tab.id} title={tab.title}>
           {!usage ? (
             <MailroomNotConnected />
           ) : !usage.ok ? (
