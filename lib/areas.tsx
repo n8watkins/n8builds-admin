@@ -1,6 +1,7 @@
 import type { IconType } from 'react-icons'
 import {
   LuActivity,
+  LuAppWindow,
   LuBug,
   LuChartLine,
   LuGamepad2,
@@ -53,6 +54,7 @@ export type AreaId =
   | 'contact'
   | 'mailroom'
   | 'waitlist'
+  | 'apps'
   | 'setup'
 
 export type Area = {
@@ -249,6 +251,19 @@ export const AREAS: Record<AreaId, Area> = {
       'Stored in its own database, n8builds-waitlist, which n8builds-web writes and this dashboard only reads.',
     ],
   },
+  apps: {
+    id: 'apps',
+    href: '/apps',
+    label: 'App stats',
+    icon: LuAppWindow,
+    accent: accent.teal,
+    summary: 'Each app\'s own admin numbers, totals only.',
+    about: [
+      'Each app with its own admin (NetTrailers first) reports its totals over a service binding, with no public URL and no token.',
+      'Totals only: never an email, a name or a per-user row. Every action stays in the app\'s own admin, linked from its card.',
+      'The shared shape is in docs/APP-STATS.md.',
+    ],
+  },
   setup: {
     id: 'setup',
     href: '/setup',
@@ -268,6 +283,8 @@ export const NAV_GROUPS: { title?: string; areas: AreaId[] }[] = [
   { areas: ['overview'] },
   { title: 'GitHub', areas: ['ci', 'minutes', 'repos', 'releases', 'security'] },
   { title: 'Sites', areas: ['demos', 'errors', 'traffic', 'mailroom'] },
+  // Apps sits beside Sites, and keeps the Overview's five-wide rows full (Sites 4 + Apps 1).
+  { title: 'Apps', areas: ['apps'] },
   { title: 'Counters', areas: ['referrals', 'contact', 'game'] },
   { title: 'People', areas: ['waitlist'] },
   { areas: ['setup'] },

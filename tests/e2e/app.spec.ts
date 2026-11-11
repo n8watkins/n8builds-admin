@@ -67,12 +67,13 @@ test.describe('overview', () => {
       await expect(page.getByText('All clear', { exact: true })).toBeVisible()
     }
     // Grouped like the sidebar.
-    for (const group of ['GitHub', 'Sites', 'Counters', 'People', 'Setup']) {
+    for (const group of ['GitHub', 'Sites', 'Counters', 'People', 'Apps', 'Setup']) {
       await expect(page.getByRole('heading', { level: 2, name: group, exact: true })).toBeVisible()
     }
     // One tile per section: a link to the section or, not connected yet, to its Setup item.
     for (const { path } of PAGES.filter((item) => item.path !== '/')) {
-      const tile = page.getByTestId(`tile-${path.slice(1)}`)
+      // App stats has one tile per app (tile-apps-nettrailers); every other section has one.
+      const tile = path === '/apps' ? page.locator('[data-testid^="tile-apps-"]').first() : page.getByTestId(`tile-${path.slice(1)}`)
       await expect(tile, path).toHaveCount(1)
       const href = (await tile.getAttribute('href')) ?? ''
       if ((await tile.textContent())?.includes('Connect')) expect(href, path).toMatch(/^\/setup(#[a-z0-9-]+)?$/)

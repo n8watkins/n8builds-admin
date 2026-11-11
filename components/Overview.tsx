@@ -53,7 +53,7 @@ function AttentionChip({ summary }: { summary: Summary }) {
           summary.tone === 'bad' ? 'bg-rose-400/15 text-rose-100 ring-rose-400/30 hover:bg-rose-400/25' : 'bg-amber-300/12 text-amber-100 ring-amber-300/30 hover:bg-amber-300/20',
         )}>
         <Icon aria-hidden className={cx('size-3.5', summary.tone === 'bad' ? 'text-rose-300' : 'text-amber-200')} />
-        {area.label}: {summary.status}
+        {summary.label ?? area.label}: {summary.status}
       </Link>
     </li>
   )
@@ -90,12 +90,12 @@ function Tile({ summary }: { summary: Summary }) {
   if (summary.tone === 'off') {
     // Not connected yet: dimmed, and it goes to the Setup item that connects it.
     return (
-      <Link href={summary.setup ? `/setup#${summary.setup}` : '/setup'} data-testid={`tile-${area.id}`} className={cx(TILE, FOCUS, 'bg-white/[0.015] ring-white/[0.06] hover:bg-white/[0.04]')}>
+      <Link href={summary.setup ? `/setup#${summary.setup}` : '/setup'} data-testid={`tile-${summary.key}`} className={cx(TILE, FOCUS, 'bg-white/[0.015] ring-white/[0.06] hover:bg-white/[0.04]')}>
         <span className="flex min-w-0 items-start gap-2 text-[14px] leading-6 font-medium text-slate-300">
           <span className="opacity-60 grayscale">
             <AreaIcon area={area} size="xs" />
           </span>
-          <span className="min-w-0">{area.label}</span>
+          <span className="min-w-0">{summary.label ?? area.label}</span>
         </span>
         <span className="text-[13px] text-slate-400">{summary.detail}</span>
         <span className="mt-auto inline-flex items-center gap-1.5 pt-1 text-[13px] font-medium text-cyan-300">
@@ -108,7 +108,7 @@ function Tile({ summary }: { summary: Summary }) {
   return (
     <Link
       href={area.href}
-      data-testid={`tile-${area.id}`}
+      data-testid={`tile-${summary.key}`}
       className={cx(
         TILE,
         FOCUS,
@@ -117,26 +117,25 @@ function Tile({ summary }: { summary: Summary }) {
       )}>
       <span className="flex min-w-0 items-start gap-2 text-[14px] leading-6 font-medium text-slate-200">
         <AreaIcon area={area} size="xs" />
-        <span className="min-w-0">{area.label}</span>
+        <span className="min-w-0">{summary.label ?? area.label}</span>
       </span>
       {/* A number reads large; a word state ("Unavailable") a size down, so it doesn't shout. */}
       <span className={cx('truncate leading-tight font-semibold tracking-tight tabular-nums', /^[\d\s,./%+-]+$/.test(summary.headline) ? 'text-[24px]' : 'text-[19px]', NUMBER[summary.tone])}>{summary.headline}</span>
-      {summary.meter && <Meter size="sm" value={summary.meter.value} max={summary.meter.max} label={`${area.label}: ${summary.meter.value} of ${summary.meter.max}`} />}
+      {summary.meter && <Meter size="sm" value={summary.meter.value} max={summary.meter.max} label={`${summary.label ?? area.label}: ${summary.meter.value} of ${summary.meter.max}`} />}
       <span className="line-clamp-2 text-[13px] text-slate-400">{summary.detail}</span>
     </Link>
   )
 }
 
 function Grid({ summaries }: { summaries: Summary[] }) {
-  const byArea = new Map<AreaId, Summary>(summaries.map((summary) => [summary.area, summary]))
   return (
     <div className="grid grid-cols-2 gap-x-3 gap-y-6 md:grid-cols-3 xl:grid-cols-5">
       {GROUPS.map((group) => {
-        const tiles = group.areas.flatMap((id) => byArea.get(id) ?? [])
+        const tiles = group.areas.flatMap((id: AreaId) => summaries.filter((summary) => summary.area === id))
         if (tiles.length === 0) return null
         const id = `group-${group.title.toLowerCase()}`
         return (
-          <section key={group.title} aria-labelledby={id} className={cx('grid grid-cols-subgrid content-start gap-y-3', SPAN[Math.min(tiles.length, 5)])}>
+          <section key={group.title} aria-labelledby={id} className={cx('grid grid-cols-subgrid grid-rows-[auto] auto-rows-fr gap-y-3', SPAN[Math.min(tiles.length, 5)])}>
             <h2 id={id} className="col-span-full text-[13px] font-semibold text-slate-400">
               {group.title}
             </h2>

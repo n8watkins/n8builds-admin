@@ -1,4 +1,5 @@
 import 'server-only'
+import { getAllAppStats, type AppStatsResult } from './app-stats'
 import { unstable_cache } from 'next/cache'
 import type { AreaId } from './areas'
 import { REVALIDATE_SECONDS } from './cache'
@@ -25,6 +26,8 @@ export type Tone = 'bad' | 'warn' | 'good' | 'quiet' | 'off'
 export type Summary = {
   area: AreaId
   key: string
+  /** The tile's name, when it isn't the area's (one tile per app under App stats). */
+  label?: string
   /** The one number (or short state) the tile shows. */
   headline: string
   /** A short note under it. */
@@ -219,7 +222,30 @@ const SOURCES: [AreaId, string, () => Promise<Summary>][] = [
   ['setup', 'setup', setup],
 ]
 
-/** Every headline, in the sidebar's order. */
+/** One tile per app that reports its own admin numbers (docs/APP-STATS.md), from its `tile` summary. */
+export function appSummary(result: AppStatsResult): Summary {
+  const { source } = result
+  const base = { area: 'apps' as const, key: `apps-${source.app}`, label: source.name }
+  if (result.state === 'unbound') return { ...base, headline: 'Not connected', detail: `Needs the ${source.binding} binding`, status: 'Not connected', tone: 'off' }
+  if (result.state === 'error') return { ...base, headline: 'Unreachable', detail: result.message, status: 'Unreachable', tone: 'warn' }
+  const { headline, meter, note, tone } = result.stats.tile
+  return {
+    ...base,
+    headline: formatNumber(headline.value),
+    detail: `${headline.label}, ${note}`,
+    status: tone === 'bad' ? 'Failing' : tone === 'warn' ? 'Check' : 'Fine',
+    tone,
+    meter: meter ? { value: meter.value, max: meter.limit } : undefined,
+  }
+}
+
+async function apps(): Promise<Summary[]> {
+  // Never cached here: each app answers from its own aggregates, under its own 5 s timeout.
+  return (await getAllAppStats().catch(() => [])).map(appSummary)
+}
+
+/** Every headline, in the sidebar's order, then one per app. */
 export async function getSummaries(): Promise<Summary[]> {
-  return Promise.all(SOURCES.map(([area, key, load]) => withTimeout(area, key, load)))
+  const [areas, appTiles] = await Promise.all([Promise.all(SOURCES.map(([area, key, load]) => withTimeout(area, key, load))), apps()])
+  return [...areas, ...appTiles]
 }
