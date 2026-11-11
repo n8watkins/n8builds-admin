@@ -69,7 +69,7 @@ function Overview({ usage }: { usage: EmailUsage }) {
             <StatusPill tone={tone}>{over ? `${formatNumber(usage.accountMonth - usage.monthlyIncluded)} over: $0.35 per 1,000` : `${formatNumber(usage.monthlyIncluded - usage.accountMonth)} included left`}</StatusPill>
           </div>
           <p className="font-mono text-[22px] leading-none whitespace-nowrap sm:text-[26px] font-semibold tabular-nums text-slate-50">
-            {formatNumber(usage.accountMonth)} <span className="text-[17px] font-normal text-slate-500">/ {formatNumber(usage.monthlyIncluded)}</span>
+            {formatNumber(usage.accountMonth)} <span className="text-[17px] font-normal text-slate-400">/ {formatNumber(usage.monthlyIncluded)}</span>
           </p>
           <Meter value={usage.accountMonth} max={usage.monthlyIncluded} label={`Emails sent in ${month} of the ${usage.monthlyIncluded} included`} />
           <p className="text-[12px] leading-relaxed text-slate-400">
@@ -82,7 +82,7 @@ function Overview({ usage }: { usage: EmailUsage }) {
           <p className="text-[13px] text-slate-400">Today, all apps</p>
           <p className="font-mono text-[22px] leading-none whitespace-nowrap sm:text-[26px] font-semibold tabular-nums text-slate-50">
             <span className={cx(todayTone === 'bad' ? 'text-rose-300' : todayTone === 'warn' ? 'text-amber-200' : undefined)}>{formatNumber(usage.globalToday)}</span>{' '}
-            <span className="text-[17px] font-normal text-slate-500">/ {formatNumber(usage.globalDayCap)}</span>
+            <span className="text-[17px] font-normal text-slate-400">/ {formatNumber(usage.globalDayCap)}</span>
           </p>
           <p className="text-[12px] text-slate-400">{usage.priorityReserve} kept for sign-in links</p>
         </div>
@@ -186,7 +186,7 @@ function GlobalCapTile({ cap, included }: { cap: GlobalMonth | undefined; includ
         </StatusPill>
       </div>
       <p className="font-mono text-[22px] leading-none whitespace-nowrap sm:text-[26px] font-semibold tabular-nums text-slate-50">
-        {formatNumber(cap.used)} <span className="text-[17px] font-normal text-slate-500">/ {formatNumber(cap.cap)}</span>
+        {formatNumber(cap.used)} <span className="text-[17px] font-normal text-slate-400">/ {formatNumber(cap.cap)}</span>
       </p>
       <Meter value={cap.used} max={cap.cap} label={`Emails sent through mailroom in the last ${cap.windowDays} days of the ${cap.cap} cap`} />
       <p className="text-[12px] leading-relaxed text-slate-400">
