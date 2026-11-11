@@ -37,9 +37,9 @@
     "prepare": "git config core.hooksPath .githooks || true"
   },
   "dependencies": {
-    "@opennextjs/cloudflare": "1.20.15",
-    "@sentry/nextjs": "11.10.0",
-    "jose": "^6.2.14",
+    "@opennextjs/cloudflare": "1.20.16",
+    "@sentry/nextjs": "11.11.0",
+    "jose": "^6.2.15",
     "next": "^16.4.3",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
@@ -48,22 +48,22 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
-    "@playwright/test": "^1.64.1",
-    "@tailwindcss/postcss": "^4.3.3",
+    "@playwright/test": "^1.65.0",
+    "@tailwindcss/postcss": "^4.3.5",
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "chrome-launcher": "^1.2.2",
+    "chrome-launcher": "^1.2.3",
     "esbuild": "^0.28.2",
     "eslint": "^10.14.0",
-    "eslint-config-next": "^16.4.3",
+    "eslint-config-next": "^16.4.5",
     "lighthouse": "^13.6.0",
     "postcss": "^8.5.32",
     "release-kit": "github:n8watkins/release-kit#v2.8.1",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.3",
-    "vitest": "^5.0.5",
-    "wrangler": "4.157.0"
+    "vitest": "^5.1.0",
+    "wrangler": "4.158.0"
   },
   "overrides": {
     "minimatch": "^11.0.3",
