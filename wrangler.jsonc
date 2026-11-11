@@ -33,7 +33,13 @@
   ],
   // The one waitlist write the dashboard needs (deleting an address on
   // request) is n8builds-web's, over RPC: its WaitlistAdmin entrypoint.
-  "services": [{ "binding": "WAITLIST_ADMIN", "service": "n8builds-web", "entrypoint": "WaitlistAdmin" }],
+  // The Mailroom page reads every app's email and takes the owner's actions
+  // through mailroom's MailroomAdmin entrypoint (github.com/n8watkins/mailroom),
+  // which no app binds; mailroom has no public URL.
+  "services": [
+    { "binding": "WAITLIST_ADMIN", "service": "n8builds-web", "entrypoint": "WaitlistAdmin" },
+    { "binding": "MAILROOM", "service": "mailroom", "entrypoint": "MailroomAdmin" }
+  ],
   // The daily snapshot (worker/handlers.ts), at the time the Vercel cron ran.
   "triggers": { "crons": ["15 6 * * *"] },
   "vars": {
