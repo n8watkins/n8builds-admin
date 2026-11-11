@@ -8,8 +8,8 @@ const subscriber = (id: string, extra: Partial<Parameters<typeof toRow>[0]> = {}
   email: `${id}@example.com`,
   note: '42',
   requested_note: '',
-  interest: 'relink',
-  referrer: 'https://getrelink.dev/',
+  interest: 'asset-arsenal',
+  referrer: 'https://example.com/',
   created_at: '2026-11-01T10:00:00.000Z',
   confirmed_at: '2026-11-01T10:05:00.000Z' as string | null,
   ...extra,
@@ -18,24 +18,24 @@ const project = (subscriber_id: string, slug: string, status: 'requested' | 'con
 
 describe('waitlist rows', () => {
   it("reads a subscriber with its own projects, as n8builds-web writes them", () => {
-    const projects = [project('a', 'relink'), project('a', 'strollz'), project('a', 'vibelog', 'requested'), project('b', 'feelium')]
+    const projects = [project('a', 'asset-arsenal'), project('a', 'strollz'), project('a', 'vibelog', 'requested'), project('b', 'feelium')]
     expect(toRow(subscriber('a'), projects)).toEqual({
       id: 'a',
       email: 'a@example.com',
-      projects: ['relink', 'strollz'],
+      projects: ['asset-arsenal', 'strollz'],
       requested: ['vibelog'],
       note: '42',
       requestedNote: '',
       createdAt: '2026-11-01T10:00:00.000Z',
       confirmedAt: '2026-11-01T10:05:00.000Z',
-      interest: 'relink',
-      referrer: 'https://getrelink.dev/',
+      interest: 'asset-arsenal',
+      referrer: 'https://example.com/',
     })
     expect(toRow(subscriber('c', { confirmed_at: null }), projects)).toMatchObject({ projects: [], requested: [], confirmedAt: '' })
   })
 
   it('counts only confirmed sign-ups per project', () => {
-    const projects = [project('a', 'relink'), project('a', 'strollz'), project('b', 'vibelog', 'requested'), project('c', 'keysready'), project('d', 'feelium')]
+    const projects = [project('a', 'asset-arsenal'), project('a', 'strollz'), project('b', 'vibelog', 'requested'), project('c', 'keysready'), project('d', 'feelium')]
     const rows = [
       toRow(subscriber('a'), projects),
       toRow(subscriber('b', { confirmed_at: null }), projects),
@@ -43,11 +43,10 @@ describe('waitlist rows', () => {
       toRow(subscriber('d', { interest: 'feelium' }), projects),
     ]
     expect(countByProject(rows).map((c) => [c.slug, c.confirmed, c.emails])).toEqual([
-      ['relink', 1, ['a@example.com']],
       ['strollz', 1, ['a@example.com']],
       ['vibelog', 0, []],
       ['keysready', 1, ['c@example.com']],
-      ['asset-arsenal', 0, []],
+      ['asset-arsenal', 1, ['a@example.com']],
       ['feelium', 1, ['d@example.com']],
     ])
   })
