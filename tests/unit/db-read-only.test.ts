@@ -73,7 +73,7 @@ async function seed() {
     project('a', 'feelium', 'confirmed'),
     project('a', 'keysready', 'confirmed'),
     project('b', 'keysready', 'confirmed'),
-    project('b', 'relink', 'requested'),
+    project('b', 'asset-arsenal', 'requested'),
     project('c', 'feelium', 'requested'),
   ])
   const a = dbs.analytics
@@ -167,10 +167,10 @@ describe('every reader of the shared databases', () => {
   it('lists the live waitlist newest first, with confirmed counts per project, KeysReady and Feelium included', async () => {
     const rows = await readWaitlist(NOW)
     expect(rows.map((r) => r.email)).toEqual(['c@example.com', 'b@example.com', 'a@example.com'])
-    expect(rows[1]).toMatchObject({ projects: ['keysready'], requested: ['relink'], note: '42', interest: 'feelium' })
+    expect(rows[1]).toMatchObject({ projects: ['keysready'], requested: ['asset-arsenal'], note: '42', interest: 'feelium' })
     expect(rows[0]).toMatchObject({ projects: [], requested: ['feelium'], confirmedAt: '' })
     const counts = Object.fromEntries(countByProject(rows).map((c) => [c.slug, c.confirmed]))
-    expect(counts).toEqual({ relink: 0, strollz: 0, vibelog: 0, keysready: 2, 'asset-arsenal': 0, feelium: 1 })
+    expect(counts).toEqual({ strollz: 0, vibelog: 0, keysready: 2, 'asset-arsenal': 0, feelium: 1 })
   })
 
   it('adds up the counters by day and field, over the last 30 days only', async () => {

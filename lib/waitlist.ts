@@ -12,7 +12,6 @@ import { waitlistDb, waitlistWriter } from '@/lib/db'
 
 /** In n8builds.dev's order (UPCOMING_SLUGS in n8builds-web's data/upcoming.ts); add a project there and here together. */
 export const PROJECTS = [
-  { slug: 'relink', name: 'Relink' },
   { slug: 'strollz', name: 'Strollz' },
   { slug: 'vibelog', name: 'VibeLog' },
   { slug: 'keysready', name: 'KeysReady' },
