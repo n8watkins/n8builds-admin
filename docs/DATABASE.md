@@ -11,7 +11,7 @@ Keep both current with the code.
 
 | Database | Binding here | Owner | This dashboard |
 | --- | --- | --- | --- |
-| `n8builds-waitlist` | `WAITLIST_DB` | n8builds-web | reader: the Waitlist page (sign-ups, per-project confirmed counts) |
+| `n8builds-waitlist` | `WAITLIST_DB` | n8builds-web | reader: the Waitlist page (sign-ups, per-project confirmed counts) and the Newsletter page (subscriber counts, digests, skipped weeks) |
 | `n8builds-analytics` | `ANALYTICS_DB` | n8builds-web | reader: referrals, contact messages, the dino game, the Overview |
 | `n8builds-admin` | `ADMIN_DB` | n8builds-admin (this repository, `migrations/admin/`) | owner: the daily snapshot of stars and Actions minutes |
 
@@ -30,6 +30,12 @@ Keep both current with the code.
 - `tests/unit/db-read-only.test.ts` fails if any other file reaches those bindings, if any reader issues a write, or if reading changes a single row.
 - The one write the dashboard needs, deleting an address on request, is n8builds-web's: the Waitlist page calls its `WaitlistAdmin.deleteSubscriber` over the `WAITLIST_ADMIN` service binding (RPC, never reachable from the internet).
 - Every page is behind the owner's GitHub sign-in.
+
+## The newsletter's tables
+
+The Newsletter page and its Overview tile read `newsletter_subscribers`, `newsletter_digests` and `newsletter_deliveries` (n8builds-web's `migrations/waitlist/0002_newsletter.sql`), in `lib/newsletter.ts`.
+Addresses are masked inside the query (`jo***@example.com`, mailroom's rule), so a full address never reaches the dashboard, and `confirm_hash` and `unsubscribe_token` are never selected.
+Until that migration reaches `n8builds-waitlist`, the page says "Not live yet" instead of failing.
 
 ## n8builds-admin
 

@@ -146,6 +146,15 @@ test.describe('tabs', () => {
     ])
   })
 
+  test('Newsletter: Summary, Digests, Skipped weeks, Subscribers', async ({ page }) => {
+    await checkTabs(page, '/newsletter', 'Newsletter sections', [
+      ['Summary', null, 'Readers and the last digest'],
+      ['Digests', 'digests', 'Recent digests'],
+      ['Skipped weeks', 'skipped', 'Skipped weeks'],
+      ['Subscribers', 'subscribers', 'Subscribers, newest first'],
+    ])
+  })
+
   test('Setup: To do, Done', async ({ page }) => {
     await checkTabs(page, '/setup', 'Setup sections', [
       ['To do', null, null],

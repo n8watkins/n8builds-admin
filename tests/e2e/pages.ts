@@ -15,5 +15,6 @@ export const PAGES = [
   { path: '/contact', heading: 'Contact messages' },
   { path: '/game', heading: 'Dino game' },
   { path: '/waitlist', heading: 'Waitlist' },
+  { path: '/newsletter', heading: 'Newsletter' },
   { path: '/setup', heading: 'Setup' },
 ] as const
