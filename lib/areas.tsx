@@ -5,6 +5,7 @@ import {
   LuBug,
   LuChartLine,
   LuGamepad2,
+  LuGauge,
   LuLayoutDashboard,
   LuListChecks,
   LuListPlus,
@@ -57,6 +58,7 @@ export type AreaId =
   | 'waitlist'
   | 'newsletter'
   | 'apps'
+  | 'cloudflare'
   | 'setup'
 
 export type Area = {
@@ -281,6 +283,21 @@ export const AREAS: Record<AreaId, Area> = {
       'The shared shape is in docs/APP-STATS.md.',
     ],
   },
+  cloudflare: {
+    id: 'cloudflare',
+    href: '/cloudflare',
+    label: 'Cloudflare usage',
+    icon: LuGauge,
+    accent: accent.orange,
+    summary: 'Workers and Workers AI against what the plan includes, so nothing is ever billed past it.',
+    about: [
+      'The Workers Paid plan includes 10 million requests and 30 million CPU milliseconds a month for the whole account; past that Cloudflare bills $0.30 per million requests and $0.02 per million CPU ms.',
+      'The rule is never to go past them: the Overview raises a chip at 70% of either, red at 90%, whether used so far or projected to the end of the month.',
+      'The projection is a straight line from the month so far; it starts counting after the first day, when it stops being noise.',
+      'Workers AI is free up to 10,000 neurons a UTC day, and PortfolioRank stops itself at 2,500 of them. Email has its own cap of 2,500 a month, on the Mailroom page.',
+      'Numbers come from Cloudflare\'s GraphQL Analytics API, which samples busy traffic and runs a few minutes behind; they refresh every 10 minutes. Requests for static assets are free and not counted.',
+    ],
+  },
   setup: {
     id: 'setup',
     href: '/setup',
@@ -304,6 +321,8 @@ export const NAV_GROUPS: { title?: string; areas: AreaId[] }[] = [
   { title: 'Apps', areas: ['apps'] },
   { title: 'Counters', areas: ['referrals', 'contact', 'game'] },
   { title: 'People', areas: ['waitlist', 'newsletter'] },
+  // Its own row on the Overview, beside Setup (Counters 3 + People 2 fill the row above).
+  { title: 'Usage', areas: ['cloudflare'] },
   { areas: ['setup'] },
 ]
 

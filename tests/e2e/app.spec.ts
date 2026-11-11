@@ -67,7 +67,7 @@ test.describe('overview', () => {
       await expect(page.getByText('All clear', { exact: true })).toBeVisible()
     }
     // Grouped like the sidebar.
-    for (const group of ['GitHub', 'Sites', 'Counters', 'People', 'Apps', 'Setup']) {
+    for (const group of ['GitHub', 'Sites', 'Counters', 'People', 'Apps', 'Usage', 'Setup']) {
       await expect(page.getByRole('heading', { level: 2, name: group, exact: true })).toBeVisible()
     }
     // One tile per section: a link to the section or, not connected yet, to its Setup item.
@@ -229,13 +229,34 @@ test.describe('navigation', () => {
     const shown: string[] = []
     for (const path of ['/setup', '/setup?tab=done']) {
       await page.goto(path)
-      await expect(page.getByText(/of 7 done/)).toBeVisible()
+      await expect(page.getByText(/of 8 done/)).toBeVisible()
       for (const item of await page.locator('main li[id]:has(h2)').all()) {
         await expect(item.getByText(/Connected|Live|Not connected|Not deployed yet|missing|Bypassed locally|Needs Plan|Secret too short|Check in Cloudflare/).first()).toBeVisible()
         shown.push((await item.getAttribute('id')) ?? '')
       }
     }
-    expect(shown.sort()).toEqual(['ai-bots', 'cloudflare-deploys', 'databases', 'github', 'ga4', 'hosting', 'sentry', 'sign-in'].sort())
+    expect(shown.sort()).toEqual(['ai-bots', 'cloudflare-analytics', 'cloudflare-deploys', 'databases', 'github', 'ga4', 'hosting', 'sentry', 'sign-in'].sort())
+  })
+})
+
+test.describe('cloudflare usage', () => {
+  // This server has no CF_ANALYTICS_TOKEN (playwright.config.ts); tests/e2e/fixtures.spec.ts checks the connected page.
+  test('without a token it says how to connect, and the Overview tile goes to Setup', async ({ page }) => {
+    await page.goto('/cloudflare')
+    const workers = page.getByRole('region', { name: /^Workers in / })
+    await expect(workers.getByText('Not connected yet')).toBeVisible()
+    await expect(workers.getByText('CF_ANALYTICS_TOKEN', { exact: true })).toBeVisible()
+    await expect(workers.getByRole('link', { name: /Set up/ })).toHaveAttribute('href', '/setup#cloudflare-analytics')
+    // The email cap link works without the token.
+    await expect(page.getByRole('region', { name: 'Email' }).getByRole('link', { name: /Open Mailroom/ })).toHaveAttribute('href', '/mailroom')
+
+    await page.goto('/')
+    const tile = page.getByTestId('tile-cloudflare')
+    await expect(tile).toContainText('Connect')
+    await expect(tile).toHaveAttribute('href', '/setup#cloudflare-analytics')
+
+    await page.goto('/setup')
+    await expect(page.locator('li#cloudflare-analytics')).toContainText('Account, Account Analytics, Read')
   })
 })
 

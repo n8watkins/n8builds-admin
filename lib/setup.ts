@@ -199,6 +199,25 @@ export const SETUP_ITEMS: SetupItem[] = [
     links: [{ label: 'Cloudflare API tokens', href: 'https://dash.cloudflare.com/profile/api-tokens' }],
   },
   {
+    id: 'cloudflare-analytics',
+    title: 'Cloudflare usage: a read-only Analytics token',
+    why: 'Shows Workers requests and CPU time this month and Workers AI neurons today against what the plan includes, and raises a chip on the Overview before anything would be billed.',
+    powers: [{ label: 'Cloudflare usage', href: '/cloudflare' }],
+    check: 'env',
+    vars: [{ name: 'CF_ANALYTICS_TOKEN', where: 'Worker secret (locally: `pass-env run -- npm run dev`, entry `n8builds-admin/CF_ANALYTICS_TOKEN`)' }],
+    steps: [
+      'In Cloudflare, Manage account, Account API tokens (or My Profile, API Tokens), Create Token, Create Custom Token.',
+      'Name `n8builds-admin analytics read`; permissions: Account, Account Analytics, Read, and nothing else; account resources: the owner\'s account only; an expiry date is fine (add a reminder).',
+      'Account Analytics Read covers both datasets the page reads, `workersInvocationsAdaptive` (Workers) and `aiInferenceAdaptiveGroups` (Workers AI); if the Workers AI part says it needs a permission, add Account, Workers AI, Read to the same token.',
+      'Store it with `pass-env set n8builds-admin/CF_ANALYTICS_TOKEN`, then set it on the Worker with `pass-env pipe n8builds-admin/CF_ANALYTICS_TOKEN -- npx wrangler secret put CF_ANALYTICS_TOKEN`.',
+      'The page reads it at most every 10 minutes; the included amounts it compares against are in `lib/cloudflare-usage.ts`.',
+    ],
+    links: [
+      { label: 'Account API tokens', href: 'https://dash.cloudflare.com/?to=/:account/api-tokens' },
+      { label: 'Workers usage in Cloudflare', href: 'https://dash.cloudflare.com/b2c564cf83cb9184dd6d7cc4ff8b38bf/workers-and-pages' },
+    ],
+  },
+  {
     id: 'hosting',
     title: 'Hosting: the Cloudflare Worker and admin.n8builds.dev',
     why: 'Puts the dashboard online at admin.n8builds.dev, behind GitHub sign-in.',
