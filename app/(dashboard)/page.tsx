@@ -1,4 +1,5 @@
 import { Suspense } from 'react'
+import { AppStatsCards } from '@/components/AppStatsCards'
 import { OverviewCards, OverviewSkeleton, OverviewStrip, StripSkeleton } from '@/components/Overview'
 import { PanelBoundary } from '@/components/PanelBoundary'
 import { PageHeader } from '@/components/ui'
@@ -19,6 +20,11 @@ export default async function OverviewPage() {
       <PanelBoundary>
         <Suspense fallback={<OverviewSkeleton />}>
           <OverviewCards />
+        </Suspense>
+      </PanelBoundary>
+      <PanelBoundary>
+        <Suspense fallback={<div aria-busy="true" aria-label="Loading" className="mt-12 h-[320px] animate-pulse rounded-2xl bg-white/[0.03]" />}>
+          <AppStatsCards />
         </Suspense>
       </PanelBoundary>
     </>

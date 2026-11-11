@@ -47,7 +47,7 @@ type Env = {
 const LOCAL = Symbol.for('n8builds-admin.localCloudflareEnv')
 type WithLocal = typeof globalThis & { [LOCAL]?: Promise<Env> }
 
-async function cloudflareEnv(): Promise<Env | null> {
+export async function cloudflareEnv(): Promise<Env | null> {
   try {
     return getCloudflareContext().env as Env
   } catch {
