@@ -15,6 +15,7 @@ Until the custom domain moves, it is served at https://n8builds-admin.nathancwat
 - `next/image` (the project icons) resizes through the Cloudflare Images binding (`IMAGES`).
 - `APP_ENV=production` (a `wrangler.jsonc` var) replaces `VERCEL_ENV`: the Setup page's hosting check and Sentry's environment read it.
 - The Releases page reads each project's latest Worker deploy from the Cloudflare API (`lib/cloudflare.ts`) with the read-only `CLOUDFLARE_DEPLOYS_TOKEN`, in place of the Vercel deployments GitHub recorded.
+- The Cloudflare usage page reads Workers and Workers AI usage from the GraphQL Analytics API (`lib/cloudflare-usage.ts`) with the read-only `CF_ANALYTICS_TOKEN` (Account, Account Analytics, Read), cached for ten minutes in the same data cache.
 
 ## The sign-in bypasses can never run here
 

@@ -10,12 +10,16 @@ import { defineConfig, devices } from '@playwright/test'
  *   (lib/auth/test-auth.ts), to check every page as the signed-in owner.
  *   With GITHUB_TOKEN set the GitHub pages show live data; without it they
  *   show their "not connected" states. The specs pass either way.
+ * - fixtures: the same E2E build with CF_ANALYTICS_FIXTURE=1, so the
+ *   Cloudflare usage page shows made-up numbers (lib/cloudflare-usage-fixture.ts)
+ *   instead of "not connected", without a token or a call to Cloudflare.
  *
  * With E2E_REMOTE_URL set (a deployed Worker, or `npm run preview`), only the
  * gate runs, against that URL, and no local server starts (DEPLOY.md).
  */
 const GATE_PORT = 3834
 const APP_PORT = 3835
+const FIXTURE_PORT = 3836
 const remote = process.env.E2E_REMOTE_URL
 
 export default defineConfig({
@@ -30,7 +34,9 @@ export default defineConfig({
     ? [{ name: 'gate', testMatch: /gate\.spec\.ts/, use: { ...devices['Desktop Chrome'], baseURL: remote } }]
     : [
         { name: 'gate', testMatch: /gate\.spec\.ts/, use: { ...devices['Desktop Chrome'], baseURL: `http://localhost:${GATE_PORT}` } },
-        { name: 'app', testIgnore: /gate\.spec\.ts/, use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, baseURL: `http://localhost:${APP_PORT}` } },
+        { name: 'app', testIgnore: /(gate|fixtures)\.spec\.ts/, use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, baseURL: `http://localhost:${APP_PORT}` } },
+        // After app: both servers read the same local D1 files, and two workerd processes reading them at once can hit SQLITE_BUSY.
+        { name: 'fixtures', dependencies: ['app'], testMatch: /fixtures\.spec\.ts/, use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, baseURL: `http://localhost:${FIXTURE_PORT}` } },
       ],
   webServer: remote ? [] : [
     {
@@ -49,7 +55,15 @@ export default defineConfig({
       url: `http://[::1]:${APP_PORT}/robots.txt`,
       reuseExistingServer: false,
       timeout: 60_000,
-      env: { ADMIN_E2E_BUILD: '1', ADMIN_TEST_AUTH: '1' },
+      // No Cloudflare token even under `pass-env run`: this server checks the "not connected" state.
+      env: { ADMIN_E2E_BUILD: '1', ADMIN_TEST_AUTH: '1', CF_ANALYTICS_TOKEN: '' },
+    },
+    {
+      command: `node_modules/.bin/next start -p ${FIXTURE_PORT}`,
+      url: `http://[::1]:${FIXTURE_PORT}/robots.txt`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+      env: { ADMIN_E2E_BUILD: '1', ADMIN_TEST_AUTH: '1', CF_ANALYTICS_FIXTURE: '1', CF_ANALYTICS_TOKEN: '' },
     },
   ],
 })

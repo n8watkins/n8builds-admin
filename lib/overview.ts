@@ -6,6 +6,7 @@ import { REVALIDATE_SECONDS } from './cache'
 import { formatNumber, timeAgo } from './format'
 import { ga4Config, getTraffic } from './ga4'
 import { getDependabotAlerts, getLatestDeployments, getOrgMinutes, getRepo, getRepoCi, getStarDates, isGitHubConnected, type WorkflowRun } from './github'
+import { getAiUsage, getWorkersUsage, isCloudflareUsageConnected, usageTile } from './cloudflare-usage'
 import { appName, getEmailUsage } from './mailroom'
 import { getDemoStatus } from './openping'
 import { APPTURNITY_ORG, FREE_ACTIONS_MINUTES, TRACKED_REPOS, shortName } from './repos'
@@ -185,6 +186,13 @@ async function newsletter(): Promise<Summary> {
   return { area: 'newsletter', key: 'newsletter', ...tileSummary(data, now.getTime()) }
 }
 
+async function cloudflare(): Promise<Summary> {
+  if (!isCloudflareUsageConnected()) return notConnected('cloudflare', 'Needs a Cloudflare analytics token', 'cloudflare-analytics')
+  const [workers, ai] = await Promise.all([getWorkersUsage(), getAiUsage()])
+  if (!workers.ok) return { area: 'cloudflare', key: 'cloudflare', headline: 'Unavailable', detail: workers.message, status: 'Unavailable', tone: 'warn' }
+  return { area: 'cloudflare', key: 'cloudflare', ...usageTile(workers.data, ai.ok ? ai.data : null) }
+}
+
 async function setup(): Promise<Summary> {
   const items = await allSetupStatuses()
   const checkable = items.filter(({ status }) => status.state !== 'manual')
@@ -226,6 +234,8 @@ const SOURCES: [AreaId, string, () => Promise<Summary>][] = [
   ['referrals', 'referrals', cachedSource('referrals', referrals)],
   ['contact', 'contact', cachedSource('contact', contact)],
   ['game', 'game', cachedSource('game', game)],
+  // Cached inside (10 minutes per GraphQL answer), so the tile and the page agree.
+  ['cloudflare', 'cloudflare', cloudflare],
   // Local reads, never cached: the waitlist and the newsletter hold people's addresses, and Setup reads this server's own configuration.
   ['waitlist', 'waitlist', waitlist],
   ['newsletter', 'newsletter', newsletter],

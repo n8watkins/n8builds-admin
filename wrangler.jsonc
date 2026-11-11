@@ -55,8 +55,8 @@
   // GITHUB_OAUTH_CLIENT_ID, GITHUB_OAUTH_CLIENT_SECRET, ADMIN_SESSION_SECRET,
   // GITHUB_TOKEN, GITHUB_ORG_TOKEN, GA4_PROPERTY_ID, GOOGLE_SA_CLIENT_EMAIL,
   // GOOGLE_SA_PRIVATE_KEY, SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECTS,
-  // SENTRY_DSN, CRON_SECRET, CLOUDFLARE_DEPLOYS_TOKEN. Each page shows "not connected"
-  // until its secrets exist.
+  // SENTRY_DSN, CRON_SECRET, CLOUDFLARE_DEPLOYS_TOKEN, CF_ANALYTICS_TOKEN. Each page
+  // shows "not connected" until its secrets exist.
   "observability": { "enabled": true, "head_sampling_rate": 1 },
   "workers_dev": true,
   "preview_urls": false
