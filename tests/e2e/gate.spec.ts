@@ -96,10 +96,12 @@ test.describe('sign-in gate (normal build)', () => {
     expect(await page.evaluate(() => (window as unknown as { __csp: string[] }).__csp)).toEqual([])
   })
 
-  test('every response is marked noindex and cannot be framed', async ({ request }) => {
+  test('every response is marked noindex, cannot be framed and pins HTTPS', async ({ request }) => {
     const response = await request.get('/login')
     expect(response.headers()['x-robots-tag']).toContain('noindex')
     expect(response.headers()['x-frame-options']).toBe('DENY')
+    // The Worker gets no HSTS from its host (Vercel added its own), so the app sends it.
+    expect(response.headers()['strict-transport-security']).toMatch(/max-age=\d{8,}/)
     const robots = await (await request.get('/robots.txt')).text()
     expect(robots).toMatch(/Disallow: \//)
   })

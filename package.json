@@ -4,7 +4,7 @@
   "description": "Owner-only dashboard for n8builds.dev (admin.n8builds.dev).",
   "private": true,
   "type": "module",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "author": "Nathan Watkins",
   "engines": {
     "node": ">=22.19.0"
