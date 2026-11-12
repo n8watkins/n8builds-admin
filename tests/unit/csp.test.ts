@@ -12,13 +12,15 @@ describe('contentSecurityPolicy', () => {
     expect(policy).not.toContain("'unsafe-eval'")
   })
 
-  it('loads nothing from other origins, and nothing can frame the dashboard', () => {
+  it('loads nothing from other origins but n8builds.dev\'s email images, and nothing can frame the dashboard', () => {
     const policy = contentSecurityPolicy('n')
     expect(directive(policy, 'connect-src')).toEqual(["'self'"])
     expect(directive(policy, 'object-src')).toEqual(["'none'"])
     expect(directive(policy, 'frame-src')).toEqual(["'none'"])
     expect(directive(policy, 'frame-ancestors')).toEqual(["'none'"])
-    expect(policy).not.toMatch(/https?:\/\//)
+    // The Announcements preview shows the email's logo and project icons, served from n8builds.dev.
+    expect(directive(policy, 'img-src')).toEqual(["'self'", 'data:', 'blob:', 'https://n8builds.dev'])
+    expect(policy.replace(' https://n8builds.dev;', ';')).not.toMatch(/https?:\/\//)
   })
 
   it('allows eval and the HMR websocket only in dev', () => {

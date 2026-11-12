@@ -48,7 +48,7 @@ export async function testDatabases(): Promise<TestDatabases> {
     persist: false,
   })
   const env = proxy.env
-  await apply(env.WAITLIST_DB, [join(ROOT, 'tests', 'fixtures', 'web-schema', 'waitlist.sql')])
+  await apply(env.WAITLIST_DB, ['waitlist.sql', 'waitlist-newsletter.sql'].map((file) => join(ROOT, 'tests', 'fixtures', 'web-schema', file)))
   await apply(env.ANALYTICS_DB, [join(ROOT, 'tests', 'fixtures', 'web-schema', 'analytics.sql')])
   await apply(env.ADMIN_DB, migrations(join(ROOT, 'migrations', 'admin')))
   const all = [env.WAITLIST_DB, env.ANALYTICS_DB, env.ADMIN_DB]

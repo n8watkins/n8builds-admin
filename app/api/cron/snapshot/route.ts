@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/nextjs'
 import { NextResponse, type NextRequest } from 'next/server'
 import { ownerFromRequest } from '@/lib/auth/owner'
+import { isSameOriginRequest } from '@/lib/auth/same-origin'
 import { safeEqual } from '@/lib/auth/tokens'
 import { getOrgMinutes, getPersonalMinutes, getRepo, isGitHubConnected } from '@/lib/github'
 import { TRACKED_REPOS } from '@/lib/repos'
@@ -14,7 +15,9 @@ export const dynamic = 'force-dynamic'
  * (n8builds-admin, `admin_snapshots`, kept 400 days) so the trend panel
  * can show "+3 stars this week" past GitHub's 14-day windows.
  * The cron calls it with `Authorization: Bearer $CRON_SECRET`; the signed-in
- * owner can also run it by hand. Anyone else gets 401.
+ * owner can also run it by hand, by opening the URL (typed, bookmarked or
+ * linked from this dashboard). Anyone else gets 401, and a signed-in run
+ * started from another site's link gets 403 (lib/auth/same-origin.ts).
  */
 function fromCron(request: NextRequest): boolean {
   const secret = process.env.CRON_SECRET
@@ -37,6 +40,9 @@ export async function GET(request: NextRequest) {
   const cron = fromCron(request)
   if (!cron && (await ownerFromRequest(request)) === null) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  }
+  if (!cron && !isSameOriginRequest(request)) {
+    return NextResponse.json({ error: 'cross-site' }, { status: 403 })
   }
   const checkInId = cron ? Sentry.captureCheckIn({ monitorSlug: MONITOR, status: 'in_progress' }, MONITOR_CONFIG) : undefined
   const done = async (status: 'ok' | 'error', problem?: string) => {

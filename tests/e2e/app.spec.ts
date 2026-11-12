@@ -36,11 +36,151 @@ test.describe('pages', () => {
     })
   }
 
-  test('pages explain themselves: "What this is and why it matters"', async ({ page }) => {
-    for (const { path } of PAGES.filter((item) => item.path !== '/' && item.path !== '/setup')) {
+  test('pages explain themselves: one line under the title, and About on demand', async ({ page }) => {
+    for (const { path } of PAGES.filter((item) => item.path !== '/')) {
       await page.goto(path)
-      await expect(page.getByRole('region', { name: 'What this is and why it matters' })).toBeVisible()
+      const header = page.getByRole('heading', { level: 1 }).locator('xpath=ancestor::header')
+      // The old always-open box is gone everywhere.
+      await expect(page.getByRole('region', { name: 'What this is and why it matters' }), path).toHaveCount(0)
+      const about = page.locator('header details > summary').filter({ hasText: 'About' })
+      await expect(about, path).toHaveCount(1)
+      // The compact header: one line, and the facts only once About is opened.
+      await expect(header.getByRole('listitem').first(), path).toBeHidden()
+      await about.click()
+      await expect(header.getByRole('listitem').first(), path).toBeVisible()
     }
+  })
+})
+
+test.describe('overview', () => {
+  test('needs attention is one row of chips (or All clear), then one tile per section', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.locator('[aria-busy="true"]')).toHaveCount(0, { timeout: 30_000 })
+    await expect(page.getByText(/refreshes every 5 minutes/)).toBeVisible()
+    const attention = page.getByRole('region', { name: 'Needs attention' })
+    if ((await attention.count()) > 0) {
+      const chips = attention.getByRole('link')
+      expect(await chips.count()).toBeGreaterThan(0)
+      // Each chip goes to its section.
+      for (const chip of await chips.all()) expect(await chip.getAttribute('href')).toMatch(/^\/[a-z]+$/)
+    } else {
+      await expect(page.getByText('All clear', { exact: true })).toBeVisible()
+    }
+    // Grouped like the sidebar.
+    for (const group of ['GitHub', 'Sites', 'Counters', 'People', 'Apps', 'Usage', 'Setup']) {
+      await expect(page.getByRole('heading', { level: 2, name: group, exact: true })).toBeVisible()
+    }
+    // One tile per section: a link to the section or, not connected yet, to its Setup item.
+    for (const { path } of PAGES.filter((item) => item.path !== '/')) {
+      // App stats has one tile per app (tile-apps-nettrailers); every other section has one.
+      const tile = path === '/apps' ? page.locator('[data-testid^="tile-apps-"]').first() : page.getByTestId(`tile-${path.slice(1)}`)
+      await expect(tile, path).toHaveCount(1)
+      const href = (await tile.getAttribute('href')) ?? ''
+      if ((await tile.textContent())?.includes('Connect')) expect(href, path).toMatch(/^\/setup(#[a-z0-9-]+)?$/)
+      else expect(href, path).toBe(path)
+    }
+    // The old strip, long cards and the separate "Not connected yet" list are gone.
+    await expect(page.getByRole('heading', { name: 'Not connected yet' })).toHaveCount(0)
+    await expect(page.getByRole('region', { name: 'At a glance' })).toHaveCount(0)
+  })
+
+  test('a tile opens its section', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.locator('[aria-busy="true"]')).toHaveCount(0, { timeout: 30_000 })
+    await page.getByTestId('tile-setup').click()
+    await expect(page).toHaveURL(/\/setup$/)
+    await expect(page.getByRole('heading', { level: 1, name: 'Setup', exact: true })).toBeVisible()
+  })
+})
+
+type TabCase = readonly [label: string, query: string | null, heading: string | null]
+
+const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/** Clicks through a page's tabs: each has its own address, is the one marked current, and shows its section. */
+async function checkTabs(page: Page, path: string, nav: string, tabs: readonly TabCase[]) {
+  await page.goto(path)
+  const links = page.getByRole('navigation', { name: nav })
+  await expect(links.getByRole('link')).toHaveCount(tabs.length)
+  for (const [label, query, heading] of [...tabs.slice(1), tabs[0]]) {
+    const link = links.getByRole('link', { name: new RegExp(`^${escape(label)}`) })
+    await link.click()
+    await expect(page).toHaveURL(new RegExp(query ? `${path}\\?tab=${query}$` : `${path}$`))
+    await expect(link).toHaveAttribute('aria-current', 'page')
+    await expect(links.locator('[aria-current="page"]')).toHaveCount(1)
+    if (heading) await expect(page.getByRole('heading', { level: 2, name: heading, exact: true })).toBeVisible()
+  }
+  // An unknown tab falls back to the first.
+  await page.goto(`${path}?tab=nope`)
+  await expect(links.getByRole('link', { name: new RegExp(`^${escape(tabs[0][0])}`) })).toHaveAttribute('aria-current', 'page')
+}
+
+test.describe('tabs', () => {
+  test('Stars and traffic: By repo, Over time', async ({ page }) => {
+    await checkTabs(page, '/repos', 'Stars and traffic sections', [
+      ['By repo', null, 'By repo'],
+      ['Over time', 'trends', 'Over time'],
+    ])
+  })
+
+  test('Releases and deploys: Latest, This month, Previews', async ({ page }) => {
+    await checkTabs(page, '/releases', 'Releases and deploys sections', [
+      ['Latest', null, 'Latest by project'],
+      ['This month', 'month', 'This month'],
+      ['Previews', 'previews', 'Preview deploys'],
+    ])
+  })
+
+  test('Website traffic: Visitors, AI crawlers', async ({ page }) => {
+    await checkTabs(page, '/traffic', 'Website traffic sections', [
+      ['Visitors', null, 'The last 28 days'],
+      ['AI crawlers', 'crawlers', 'AI crawlers'],
+    ])
+  })
+
+  test('Waitlist: Summary, Sign-ups, Bcc lists', async ({ page }) => {
+    await checkTabs(page, '/waitlist', 'Waitlist sections', [
+      ['Summary', null, 'Confirmed per project'],
+      ['Sign-ups', 'signups', 'Sign-ups, newest first'],
+      ['Bcc lists', 'bcc', 'Bcc lists'],
+    ])
+  })
+
+  test('Newsletter: Summary, Digests, Skipped weeks, Subscribers', async ({ page }) => {
+    await checkTabs(page, '/newsletter', 'Newsletter sections', [
+      ['Summary', null, 'Readers and the last digest'],
+      ['Digests', 'digests', 'Recent digests'],
+      ['Skipped weeks', 'skipped', 'Skipped weeks'],
+      ['Subscribers', 'subscribers', 'Subscribers, newest first'],
+    ])
+  })
+
+  test('Setup: To do, Done', async ({ page }) => {
+    await checkTabs(page, '/setup', 'Setup sections', [
+      ['To do', null, null],
+      ['Done', 'done', null],
+    ])
+  })
+
+  test('Mailroom: its sections are tabs with their own addresses', async ({ page }) => {
+    await page.goto('/mailroom')
+    const tabs = page.getByRole('navigation', { name: 'Mailroom sections' })
+    await expect(tabs.getByRole('link', { name: 'Overview' })).toHaveAttribute('aria-current', 'page')
+    for (const [name, query, title] of [
+      ['Sends', 'sends', 'Recent sends'],
+      ['Bounces & complaints', 'problems', 'Bounces and complaints'],
+      ['Suppressions', 'suppressions', 'Suppression list'],
+      ['Apps & caps', 'apps', 'Apps and caps'],
+      ['Audit log', 'audit', 'Audit log'],
+    ] as const) {
+      await tabs.getByRole('link', { name: new RegExp(`^${name.replace('&', '\\&')}`) }).click()
+      await expect(page).toHaveURL(new RegExp(`/mailroom\\?tab=${query}$`))
+      await expect(page.getByRole('heading', { level: 2, name: title, exact: true })).toBeVisible()
+      await expect(tabs.getByRole('link', { name: new RegExp(`^${name.replace('&', '\\&')}`) })).toHaveAttribute('aria-current', 'page')
+    }
+    // An unknown tab falls back to the overview.
+    await page.goto('/mailroom?tab=nope')
+    await expect(page.getByRole('heading', { level: 2, name: 'This month at a glance', exact: true })).toBeVisible()
   })
 })
 
@@ -85,11 +225,61 @@ test.describe('navigation', () => {
   }
 
   test('the Setup page lists every item with a status', async ({ page }) => {
-    await page.goto('/setup')
-    for (const id of ['sign-in', 'github', 'ga4', 'sentry', 'databases', 'cloudflare-deploys', 'hosting', 'ai-bots']) {
-      await expect(page.locator(`li#${id} h2`)).toBeVisible()
+    // Every item is under To do or Done, never both.
+    const shown: string[] = []
+    for (const path of ['/setup', '/setup?tab=done']) {
+      await page.goto(path)
+      await expect(page.getByText(/of 8 done/)).toBeVisible()
+      for (const item of await page.locator('main li[id]:has(h2)').all()) {
+        await expect(item.getByText(/Connected|Live|Not connected|Not deployed yet|missing|Bypassed locally|Needs Plan|Secret too short|Check in Cloudflare/).first()).toBeVisible()
+        shown.push((await item.getAttribute('id')) ?? '')
+      }
     }
-    await expect(page.getByText(/of 7 done/)).toBeVisible()
+    expect(shown.sort()).toEqual(['ai-bots', 'cloudflare-analytics', 'cloudflare-deploys', 'databases', 'github', 'ga4', 'hosting', 'sentry', 'sign-in'].sort())
+  })
+})
+
+test.describe('cloudflare usage', () => {
+  // This server has no CF_ANALYTICS_TOKEN (playwright.config.ts); tests/e2e/fixtures.spec.ts checks the connected page.
+  test('without a token it says how to connect, and the Overview tile goes to Setup', async ({ page }) => {
+    await page.goto('/cloudflare')
+    const workers = page.getByRole('region', { name: /^Workers in / })
+    await expect(workers.getByText('Not connected yet')).toBeVisible()
+    await expect(workers.getByText('CF_ANALYTICS_TOKEN', { exact: true })).toBeVisible()
+    await expect(workers.getByRole('link', { name: /Set up/ })).toHaveAttribute('href', '/setup#cloudflare-analytics')
+    // The email cap link works without the token.
+    await expect(page.getByRole('region', { name: 'Email' }).getByRole('link', { name: /Open Mailroom/ })).toHaveAttribute('href', '/mailroom')
+
+    await page.goto('/')
+    const tile = page.getByTestId('tile-cloudflare')
+    await expect(tile).toContainText('Connect')
+    await expect(tile).toHaveAttribute('href', '/setup#cloudflare-analytics')
+
+    await page.goto('/setup')
+    await expect(page.locator('li#cloudflare-analytics')).toContainText('Account, Account Analytics, Read')
+  })
+})
+
+test.describe('announcements', () => {
+  // This server runs no n8builds-web, so ANNOUNCE has nothing behind it; tests/e2e/announcements.spec.ts checks the connected page.
+  test('without n8builds-web it says it is not connected, on both tabs, and the Overview tile goes to Setup', async ({ page }) => {
+    for (const path of ['/announcements', '/announcements?tab=history']) {
+      await page.goto(path)
+      const panel = page.locator('main section').last()
+      await expect(panel.getByText('Not connected yet'), path).toBeVisible()
+      await expect(panel.getByText("ANNOUNCE (service binding to n8builds-web's Announcements)", { exact: true }), path).toBeVisible()
+      // Not an error panel (Next's route announcer is an alert too, so match the panel's text).
+      await expect(page.getByRole('alert').filter({ hasText: /Couldn't load this/ }), path).toHaveCount(0)
+    }
+    await checkTabs(page, '/announcements', 'Announcements sections', [
+      ['Compose', null, 'New announcement'],
+      ['History', 'history', 'Announcements, newest first'],
+    ])
+
+    await page.goto('/')
+    const tile = page.getByTestId('tile-announcements')
+    await expect(tile).toContainText('Connect')
+    await expect(tile).toContainText('Needs the ANNOUNCE binding')
   })
 })
 

@@ -15,6 +15,7 @@ It is served at https://admin.n8builds.dev (a Workers custom domain in `wrangler
 - `next/image` (the project icons) resizes through the Cloudflare Images binding (`IMAGES`).
 - `APP_ENV=production` (a `wrangler.jsonc` var) replaces `VERCEL_ENV`: the Setup page's hosting check and Sentry's environment read it.
 - The Releases page reads each project's latest Worker deploy from the Cloudflare API (`lib/cloudflare.ts`) with the read-only `CLOUDFLARE_DEPLOYS_TOKEN`, in place of the Vercel deployments GitHub recorded.
+- The Cloudflare usage page reads Workers and Workers AI usage from the GraphQL Analytics API (`lib/cloudflare-usage.ts`) with the read-only `CF_ANALYTICS_TOKEN` (Account, Account Analytics, Read), cached for ten minutes in the same data cache.
 
 ## The sign-in bypasses can never run here
 
@@ -40,8 +41,18 @@ After changing bindings in `wrangler.jsonc`, run `npm run cf-typegen` to update 
 ## Automatic deploys
 
 `.github/workflows/deploy.yml` builds and deploys on every push to `main`, and on demand from the Actions tab.
-It needs a `CLOUDFLARE_API_TOKEN` repository secret: a Cloudflare API token made from the "Edit Cloudflare Workers" template, limited to the owner's account.
+It needs a `CLOUDFLARE_API_TOKEN` secret in the repository's `production` environment (Settings, Environments), whose deployment branches are limited to `main`.
+Only the migrate and deploy steps receive it, so dependency install scripts and the build never see it; never add it to `ci.yml`, which runs on fork pull requests.
 Until that secret exists, the workflow builds and then skips the deploy with a notice.
+
+The token is a custom Cloudflare API token, not the "Edit Cloudflare Workers" template (which also covers KV, Pages, routes on every zone and more).
+Its permissions, all on the owner's account only:
+
+- Account, Workers Scripts, Edit: upload the Worker and its Cron Trigger.
+- Account, D1, Edit: `npm run db:migrate` on `n8builds-admin`.
+- Account, Workers R2 Storage, Edit: OpenNext fills the `n8builds-admin-opennext-cache` bucket on deploy.
+
+Once admin.n8builds.dev is a Worker custom domain (PR #40), also add Zone, Workers Routes, Edit for the `n8builds.dev` zone, if a deploy reports it can't attach the domain.
 
 ## Deploy by hand
 

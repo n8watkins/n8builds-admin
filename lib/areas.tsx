@@ -1,15 +1,20 @@
 import type { IconType } from 'react-icons'
 import {
   LuActivity,
+  LuAppWindow,
   LuBug,
   LuChartLine,
   LuGamepad2,
+  LuGauge,
   LuLayoutDashboard,
   LuListChecks,
   LuListPlus,
   LuMail,
+  LuMegaphone,
   LuMousePointerClick,
+  LuNewspaper,
   LuRocket,
+  LuSend,
   LuShieldCheck,
   LuStar,
   LuTimer,
@@ -18,7 +23,7 @@ import {
 
 /**
  * Every area of the dashboard: its page, icon, colour, and the plain-language
- * context shown on its Overview card and at the top of its page.
+ * context shown at the top of its page.
  * Tailwind needs literal class names, so each accent spells its classes out.
  */
 export type Accent = { text: string; tile: string; bar: string }
@@ -50,7 +55,12 @@ export type AreaId =
   | 'referrals'
   | 'game'
   | 'contact'
+  | 'mailroom'
   | 'waitlist'
+  | 'newsletter'
+  | 'announcements'
+  | 'apps'
+  | 'cloudflare'
   | 'setup'
 
 export type Area = {
@@ -59,9 +69,9 @@ export type Area = {
   label: string
   icon: IconType
   accent: Accent
-  /** One or two sentences for the Overview card. */
+  /** One short line under the page title. */
   summary: string
-  /** The page's "What this is" facts, one sentence each. */
+  /** The longer explanation, one sentence each, opened on demand under About. */
   about: string[]
 }
 
@@ -81,10 +91,11 @@ export const AREAS: Record<AreaId, Area> = {
     label: 'CI',
     icon: LuWorkflow,
     accent: accent.sky,
-    summary: 'The automated checks GitHub runs on every push. Red means the latest run on a main branch failed.',
+    summary: 'The latest GitHub Actions run of each workflow on each main branch.',
     about: [
       'CI (GitHub Actions) runs each repo\'s tests, lint, builds and scheduled jobs (nightly checks, backups) on GitHub\'s machines.',
       'A red main branch means the live site may be running broken code, or a scheduled job has stopped working.',
+      'A failing run on a main branch shows red, and floats to the top of the Overview.',
       'Public repos run free, so these never cost Actions minutes.',
     ],
   },
@@ -94,7 +105,7 @@ export const AREAS: Record<AreaId, Area> = {
     label: 'Actions minutes',
     icon: LuTimer,
     accent: accent.indigo,
-    summary: 'GitHub\'s free CI time for private repos: 2,000 minutes a month per account, reset at the start of each month.',
+    summary: 'Private-repo CI time: 2,000 free minutes a month per account.',
     about: [
       'GitHub Free includes 2,000 Linux CI minutes a month for each account: your personal account and the Appturnity org each have their own.',
       'Public repos (all the n8builds builds) don\'t use them; Appturnity\'s private monorepo-app does.',
@@ -107,7 +118,7 @@ export const AREAS: Record<AreaId, Area> = {
     label: 'Stars and traffic',
     icon: LuStar,
     accent: accent.yellow,
-    summary: 'Stars and GitHub repo traffic (views and clones) for the public builds.',
+    summary: 'Stars, views and clones of the public builds on GitHub.',
     about: [
       'Stars are people bookmarking a repo; views and clones are visits to its GitHub page and downloads of its code.',
       'They show which builds people find on GitHub, beyond n8builds.dev itself.',
@@ -120,7 +131,7 @@ export const AREAS: Record<AreaId, Area> = {
     label: 'Releases and deploys',
     icon: LuRocket,
     accent: accent.teal,
-    summary: 'Tagged versions of each build and what is live on Cloudflare Workers.',
+    summary: 'Tagged versions of each build and what is live on Workers.',
     about: [
       'A release is a tagged version of a build (the weekly release train cuts them for n8builds.dev).',
       'A deploy is a new version going live on the project\'s Cloudflare Worker (or, for a project still on Vercel, Vercel publishing a commit).',
@@ -133,11 +144,12 @@ export const AREAS: Record<AreaId, Area> = {
     label: 'Security alerts',
     icon: LuShieldCheck,
     accent: accent.orange,
-    summary: 'Dependabot warns when a dependency has a known vulnerability. Alerts are on for every build repo.',
+    summary: 'Dependabot alerts for dependencies with known vulnerabilities.',
     about: [
       'Dependabot compares each repo\'s dependencies with GitHub\'s vulnerability database and opens an alert for each match.',
       'Each alert names the vulnerable package and the version that fixes it; Dependabot can open a pull request with the fix.',
       'Critical and high come first: those are worth fixing soon, especially in a deployed site.',
+      'Alerts are on for every build repo; a repo with them off reports nothing.',
     ],
   },
   demos: {
@@ -146,10 +158,10 @@ export const AREAS: Record<AreaId, Area> = {
     label: 'Live demos',
     icon: LuActivity,
     accent: accent.emerald,
-    summary: 'OpenPing checks the portfolio\'s Render demos every 12 minutes on weekdays; off-hours they sleep on purpose.',
+    summary: 'Uptime of the portfolio\'s Render demos, from OpenPing.',
     about: [
       'Echo, Scout and GeminiGPT run on Render\'s free tier, which puts apps to sleep when idle.',
-      'OpenPing, your own uptime monitor, checks them on a schedule and keeps them awake during working hours.',
+      'OpenPing, your own uptime monitor, checks them every 12 minutes on weekdays and keeps them awake during working hours; off-hours they sleep on purpose.',
       'Grey days are scheduled off-hours and don\'t count as downtime.',
     ],
   },
@@ -159,7 +171,7 @@ export const AREAS: Record<AreaId, Area> = {
     label: 'Errors',
     icon: LuBug,
     accent: accent.rose,
-    summary: 'Errors visitors hit on n8builds.dev and the portfolio, as Sentry records them.',
+    summary: 'Errors visitors hit on n8builds.dev and the portfolio, from Sentry.',
     about: [
       'Sentry records JavaScript and server errors that real visitors run into, with the page and browser.',
       'New issues usually mean a recent change broke something.',
@@ -172,9 +184,9 @@ export const AREAS: Record<AreaId, Area> = {
     label: 'Website traffic',
     icon: LuChartLine,
     accent: accent.blue,
-    summary: 'Who visits n8builds.dev: visitors, countries, top pages, referrers and engagement, from Google Analytics.',
+    summary: 'Who visits n8builds.dev, from Google Analytics.',
     about: [
-      'Google Analytics (one property for all of n8builds.dev) counts visitors and what they do.',
+      'Google Analytics (one property for all of n8builds.dev) counts visitors, countries, top pages, referrers and engagement.',
       'Top pages and referrers show which builds and posts bring people in, and from where.',
       'AI crawlers aren\'t counted here; Cloudflare\'s AI Crawl Control logs them.',
     ],
@@ -199,7 +211,7 @@ export const AREAS: Record<AreaId, Area> = {
     label: 'Dino game',
     icon: LuGamepad2,
     accent: accent.lime,
-    summary: 'Who plays the dino catch game on n8builds.dev and the portfolio, and the high scores.',
+    summary: 'Rounds, players and high scores of the dino catch game.',
     about: [
       'The dino in the AI kit (n8builds.dev) and the tech stack card (the portfolio) is a 30-second catch game.',
       'This counts rounds, players, tries, scores and countries, and keeps the high scores with site, country and date.',
@@ -219,17 +231,89 @@ export const AREAS: Record<AreaId, Area> = {
       'Only a daily number is stored, never the message.',
     ],
   },
+  mailroom: {
+    id: 'mailroom',
+    href: '/mailroom',
+    label: 'Mailroom',
+    icon: LuSend,
+    accent: accent.sky,
+    summary: 'Every app\'s email: usage, caps, bounces and blocked addresses.',
+    about: [
+      'mailroom is the one Worker that sends every app\'s email through Cloudflare Email Service, with caps per app and bounce handling. The plan includes 3,000 emails a month, then $0.35 per 1,000.',
+      'Delivered counts come from Cloudflare\'s delivery events, so apps that still send on their own count too. Mail to your own verified inbox is free, and Cloudflare does not always report it. Today and month are sends through mailroom, which its caps count.',
+      'Addresses are shown masked and no email content is ever stored; every change here is written to an audit log.',
+    ],
+  },
   waitlist: {
     id: 'waitlist',
     href: '/waitlist',
     label: 'Waitlist',
     icon: LuListPlus,
     accent: accent.cyan,
-    summary: 'Who joined the waitlist on n8builds.dev/upcoming, and for which projects.',
+    summary: 'Who joined the waitlist on n8builds.dev/upcoming, by project.',
     about: [
       'Sign-ups confirm by email (double opt-in); unconfirmed ones expire after 7 days.',
       'Every waitlist email has a leave link that deletes the entry; Delete here does the same.',
       'Stored in its own database, n8builds-waitlist, which n8builds-web writes and this dashboard only reads.',
+    ],
+  },
+  newsletter: {
+    id: 'newsletter',
+    href: '/newsletter',
+    label: 'Newsletter',
+    icon: LuNewspaper,
+    accent: accent.indigo,
+    summary: 'Who gets new N8\'s Notions posts by email, and each weekly digest.',
+    about: [
+      'Readers sign up on n8builds.dev\'s blog and confirm by email (double opt-in); an unconfirmed address expires after 7 days.',
+      'A weekly digest goes out when a post was published since the last one, sent through mailroom in small batches; a week that would go past the newsletter\'s monthly email budget is skipped, with the reason.',
+      'A long list sends over several days (up to 30 emails a daily run); a digest with no delivery for 26 hours counts as stalled and needs attention.',
+      'Every digest has an unsubscribe link that deletes the address. Addresses are shown masked, and links\' tokens are never read.',
+      'Stored in n8builds-waitlist beside the waitlist, which n8builds-web writes and this dashboard only reads.',
+    ],
+  },
+  announcements: {
+    id: 'announcements',
+    href: '/announcements',
+    label: 'Announcements',
+    icon: LuMegaphone,
+    accent: accent.rose,
+    summary: 'Email a project\'s confirmed waitlist people when there is news.',
+    about: [
+      'An announcement goes to everyone who confirmed their spot on one project\'s waitlist, from a template (now open, a progress update, launched) with your own words in it.',
+      'n8builds-web sends it through mailroom as the n8builds-web app: 20 at once, then 20 every 15 minutes, at most 40 announcement emails a UTC day and 140 a month, which leaves the rest of its slice (60 a day, 200 a month) for the contact form and waitlist mail. At a limit it pauses and carries on by itself.',
+      'An address mailroom has suppressed (a bounce, a complaint) counts as failed and is passed over.',
+      'A project can be announced at most once in 30 days, so nobody gets more than one a month about it.',
+      'Every email has a leave link that takes the address off the waitlist. This dashboard never sees an address: n8builds-web holds them.',
+      'Once it starts it cannot be unsent; Cancel only stops the emails not sent yet.',
+    ],
+  },
+  apps: {
+    id: 'apps',
+    href: '/apps',
+    label: 'App stats',
+    icon: LuAppWindow,
+    accent: accent.teal,
+    summary: 'Each app\'s own admin numbers, totals only.',
+    about: [
+      'Each app with its own admin (NetTrailers first) reports its totals over a service binding, with no public URL and no token.',
+      'Totals only: never an email, a name or a per-user row. Every action stays in the app\'s own admin, linked from its card.',
+      'The shared shape is in docs/APP-STATS.md.',
+    ],
+  },
+  cloudflare: {
+    id: 'cloudflare',
+    href: '/cloudflare',
+    label: 'Cloudflare usage',
+    icon: LuGauge,
+    accent: accent.orange,
+    summary: 'Workers and Workers AI against what the plan includes, so nothing is ever billed past it.',
+    about: [
+      'The Workers Paid plan includes 10 million requests and 30 million CPU milliseconds a month for the whole account; past that Cloudflare bills $0.30 per million requests and $0.02 per million CPU ms.',
+      'The rule is never to go past them: the Overview raises a chip at 70% of either, red at 90%, whether used so far or projected to the end of the month.',
+      'The projection is a straight line from the month so far; it starts counting after the first day, when it stops being noise.',
+      'Workers AI is free up to 10,000 neurons a UTC day, and PortfolioRank stops itself at 2,500 of them. Email has its own cap of 2,500 a month, on the Mailroom page.',
+      'Numbers come from Cloudflare\'s GraphQL Analytics API, which samples busy traffic and runs a few minutes behind; they refresh every 10 minutes. Requests for static assets are free and not counted.',
     ],
   },
   setup: {
@@ -239,16 +323,24 @@ export const AREAS: Record<AreaId, Area> = {
     icon: LuListChecks,
     accent: accent.slate,
     summary: 'Everything to create once so every page shows live data.',
-    about: [],
+    about: [
+      'Each item shows its status right now: anything not done is under To do.',
+      'Put secrets straight into the Cloudflare Worker (npx wrangler secret put) or, locally, into .env.local; never into a chat.',
+      'The same list lives in docs/SETUP.md.',
+    ],
   },
 }
 
 export const NAV_GROUPS: { title?: string; areas: AreaId[] }[] = [
   { areas: ['overview'] },
   { title: 'GitHub', areas: ['ci', 'minutes', 'repos', 'releases', 'security'] },
-  { title: 'Sites', areas: ['demos', 'errors', 'traffic'] },
+  { title: 'Sites', areas: ['demos', 'errors', 'traffic', 'mailroom'] },
+  // Apps sits beside Sites, and keeps the Overview's five-wide rows full (Sites 4 + Apps 1).
+  { title: 'Apps', areas: ['apps'] },
   { title: 'Counters', areas: ['referrals', 'contact', 'game'] },
-  { title: 'People', areas: ['waitlist'] },
+  { title: 'People', areas: ['waitlist', 'newsletter', 'announcements'] },
+  // On the Overview's five-wide rows: Counters 3 on one, then People 3 + Usage 1 + Setup 1 fill the next.
+  { title: 'Usage', areas: ['cloudflare'] },
   { areas: ['setup'] },
 ]
 

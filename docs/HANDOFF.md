@@ -4,7 +4,7 @@
 
 ### What this is
 
-The owner's private dashboard at https://admin.n8builds.dev (Next.js, GitHub sign-in).
+The owner-only dashboard at https://admin.n8builds.dev (Next.js, GitHub sign-in).
 It runs on Cloudflare Workers (DEPLOY.md) at https://n8builds-admin.nathancwatkins23.workers.dev; admin.n8builds.dev still points at Vercel until the owner moves the domain and sets the Worker's secrets (OWNER-TODO.md).
 It isn't listed publicly.
 Setup details: `docs/SETUP.md`.
@@ -25,6 +25,6 @@ Setup details: `docs/SETUP.md`.
 ### Blocked on the owner
 
 Nothing blocks the code.
-The owner's open steps (rotating both GitHub tokens, which also resets their 2027 expiry) are in [../OWNER-TODO.md](../OWNER-TODO.md); keep that file current instead of listing them here.
+The owner's open steps are in the local, gitignored `OWNER-TODO.md` in the main checkout (the repo is public, so it never goes in git); keep that file current instead of listing them here.
 
 The cross-project backlog lives in n8builds-web: `PROJECT_BACKLOG.md`.

@@ -2,7 +2,11 @@
 // build if a compiled server or client file still reads a sign-in bypass:
 // - the dev preview's ADMIN_DEV_BYPASS, in every production build;
 // - the test stub's ADMIN_TEST_AUTH, in every build except a local E2E build
-//   (ADMIN_E2E_BUILD=1, written to .next-e2e).
+//   (ADMIN_E2E_BUILD=1, written to .next-e2e);
+// - the Cloudflare usage page's made-up numbers, CF_ANALYTICS_FIXTURE
+//   (lib/cloudflare-usage.ts), and the Announcements page's made-up
+//   entrypoint, ANNOUNCE_FIXTURE (lib/announce-fixture.ts), on the same
+//   terms as ADMIN_TEST_AUTH.
 // With --worker it checks the Cloudflare Worker bundle instead (.open-next,
 // what `opennextjs-cloudflare deploy` uploads), for both reads: no E2E build
 // is ever allowed there (npm run build:worker and npm run deploy run it).
@@ -16,7 +20,10 @@ const worker = process.argv.includes('--worker')
 const e2e = !worker && process.env.ADMIN_E2E_BUILD === '1'
 const dist = worker ? '.open-next' : e2e ? '.next-e2e' : '.next'
 const reads = (name) => new RegExp(`env\\s*(?:\\.\\s*${name}|\\[\\s*["'\`]${name})`)
-const forbidden = [['ADMIN_DEV_BYPASS', reads('ADMIN_DEV_BYPASS')], ...(e2e ? [] : [['ADMIN_TEST_AUTH', reads('ADMIN_TEST_AUTH')]])]
+const forbidden = [
+  ['ADMIN_DEV_BYPASS', reads('ADMIN_DEV_BYPASS')],
+  ...(e2e ? [] : [['ADMIN_TEST_AUTH', reads('ADMIN_TEST_AUTH')], ['CF_ANALYTICS_FIXTURE', reads('CF_ANALYTICS_FIXTURE')], ['ANNOUNCE_FIXTURE', reads('ANNOUNCE_FIXTURE')]]),
+]
 const offenders = []
 
 function walk(dir) {
@@ -44,7 +51,7 @@ if (worker) {
 }
 
 if (offenders.length > 0) {
-  console.error('A sign-in bypass survived the production build:\n' + offenders.map((line) => `  ${line}`).join('\n'))
+  console.error('A test-only switch survived the production build:\n' + offenders.map((line) => `  ${line}`).join('\n'))
   process.exit(1)
 }
 console.log(`check-no-dev-bypass: ${forbidden.map(([name]) => name).join(' and ')} compiled out of ${dist}.`)

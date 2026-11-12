@@ -158,14 +158,15 @@ export const SETUP_ITEMS: SetupItem[] = [
   },
   {
     id: 'databases',
-    title: 'Counters, trends and the waitlist: the D1 databases',
-    why: 'Reads the referral, contact and dino game counts and the waitlist from the databases n8builds-web writes, and keeps the daily stars and minutes snapshot in the dashboard\'s own database.',
+    title: 'Counters, trends, the waitlist and the newsletter: the D1 databases',
+    why: 'Reads the referral, contact and dino game counts, the waitlist and the newsletter from the databases n8builds-web writes, and keeps the daily stars and minutes snapshot in the dashboard\'s own database.',
     powers: [
       { label: 'Stars trend', href: '/repos' },
       { label: 'Referrals', href: '/referrals' },
       { label: 'Contact messages', href: '/contact' },
       { label: 'Dino game', href: '/game' },
       { label: 'Waitlist', href: '/waitlist' },
+      { label: 'Newsletter', href: '/newsletter' },
     ],
     check: 'bindings',
     vars: [
@@ -198,6 +199,25 @@ export const SETUP_ITEMS: SetupItem[] = [
     links: [{ label: 'Cloudflare API tokens', href: 'https://dash.cloudflare.com/profile/api-tokens' }],
   },
   {
+    id: 'cloudflare-analytics',
+    title: 'Cloudflare usage: a read-only Analytics token',
+    why: 'Shows Workers requests and CPU time this month and Workers AI neurons today against what the plan includes, and raises a chip on the Overview before anything would be billed.',
+    powers: [{ label: 'Cloudflare usage', href: '/cloudflare' }],
+    check: 'env',
+    vars: [{ name: 'CF_ANALYTICS_TOKEN', where: 'Worker secret (locally: `pass-env run -- npm run dev`, entry `n8builds-admin/CF_ANALYTICS_TOKEN`)' }],
+    steps: [
+      'In Cloudflare, Manage account, Account API tokens (or My Profile, API Tokens), Create Token, Create Custom Token.',
+      'Name `n8builds-admin analytics read`; permissions: Account, Account Analytics, Read, and nothing else; account resources: the owner\'s account only; an expiry date is fine (add a reminder).',
+      'Account Analytics Read covers both datasets the page reads, `workersInvocationsAdaptive` (Workers) and `aiInferenceAdaptiveGroups` (Workers AI); if the Workers AI part says it needs a permission, add Account, Workers AI, Read to the same token.',
+      'Store it with `pass-env set n8builds-admin/CF_ANALYTICS_TOKEN`, then set it on the Worker with `pass-env pipe n8builds-admin/CF_ANALYTICS_TOKEN -- npx wrangler secret put CF_ANALYTICS_TOKEN`.',
+      'The page reads it at most every 10 minutes; the included amounts it compares against are in `lib/cloudflare-usage.ts`.',
+    ],
+    links: [
+      { label: 'Account API tokens', href: 'https://dash.cloudflare.com/?to=/:account/api-tokens' },
+      { label: 'Workers usage in Cloudflare', href: 'https://dash.cloudflare.com/b2c564cf83cb9184dd6d7cc4ff8b38bf/workers-and-pages' },
+    ],
+  },
+  {
     id: 'hosting',
     title: 'Hosting: the Cloudflare Worker and admin.n8builds.dev',
     why: 'Puts the dashboard online at admin.n8builds.dev, behind GitHub sign-in.',
@@ -208,7 +228,7 @@ export const SETUP_ITEMS: SetupItem[] = [
       'The dashboard runs as the `n8builds-admin` Cloudflare Worker (DEPLOY.md), at `https://n8builds-admin.nathancwatkins23.workers.dev` until the domain moves.',
       'Before the first deploy, set every secret on this page with `npx wrangler secret put <NAME>`.',
       'Never set `ADMIN_DEV_BYPASS` or `ADMIN_TEST_AUTH` on the Worker; production builds compile both out, the build fails if either survives, and `APP_ENV=production` switches them off again at runtime.',
-      'Add `CLOUDFLARE_API_TOKEN` (the "Edit Cloudflare Workers" template) as a GitHub Actions secret on the repo, so every push to `main` deploys.',
+      'Add `CLOUDFLARE_API_TOKEN` (a custom token with Workers Scripts, D1 and Workers R2 Storage Edit on the owner\'s account only, DEPLOY.md) as a secret of the repo\'s `production` environment, so every push to `main` deploys.',
       'To move the domain, delete the `admin` CNAME to Vercel in Cloudflare DNS, then add `admin.n8builds.dev` as a custom domain of the Worker.',
       'Open `https://admin.n8builds.dev`, sign in with GitHub, and check that this page shows everything connected.',
       'Optional check: sign in with any other GitHub account and see "This dashboard is private to its owner".',

@@ -12,6 +12,9 @@ npm-debug.log*
 .env
 .env*.local
 
+# The owner's to-do (accounts and keys): local only, the repo is public.
+/OWNER-TODO.md
+
 .vercel
 *.tsbuildinfo
 next-env.d.ts

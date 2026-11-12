@@ -38,6 +38,25 @@ test.describe('sign-in gate (normal build)', () => {
     expect(other.status()).toBe(401)
   })
 
+  test("sign-out works from the dashboard's own form, in a real browser", async ({ page }) => {
+    await page.goto('/login')
+    // The same form the sidebar renders (components/Nav.tsx), posted by the browser itself.
+    await page.evaluate(() => {
+      const form = document.createElement('form')
+      form.method = 'post'
+      form.action = '/api/auth/logout'
+      document.body.append(form)
+      form.submit()
+    })
+    await expect(page).toHaveURL(/\/login\?signed-out=1$/)
+  })
+
+  test("another site's form can't sign the owner out", async ({ request }) => {
+    const logout = await request.post('/api/auth/logout', { headers: { 'sec-fetch-site': 'cross-site' }, maxRedirects: 0 })
+    expect(logout.status()).toBe(403)
+    expect(logout.headers()['set-cookie']).toBeUndefined()
+  })
+
   test('a forged or foreign session cookie is refused', async ({ request }) => {
     // Sent as a raw header: a browser won't store a __Host- cookie for plain-HTTP localhost from a test.
     for (const value of ['not-a-real-token', 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI4MDU1OTM1In0.c2lnbmF0dXJl']) {
@@ -77,10 +96,12 @@ test.describe('sign-in gate (normal build)', () => {
     expect(await page.evaluate(() => (window as unknown as { __csp: string[] }).__csp)).toEqual([])
   })
 
-  test('every response is marked noindex and cannot be framed', async ({ request }) => {
+  test('every response is marked noindex, cannot be framed and pins HTTPS', async ({ request }) => {
     const response = await request.get('/login')
     expect(response.headers()['x-robots-tag']).toContain('noindex')
     expect(response.headers()['x-frame-options']).toBe('DENY')
+    // The Worker gets no HSTS from its host (Vercel added its own), so the app sends it.
+    expect(response.headers()['strict-transport-security']).toMatch(/max-age=\d{8,}/)
     const robots = await (await request.get('/robots.txt')).text()
     expect(robots).toMatch(/Disallow: \//)
   })

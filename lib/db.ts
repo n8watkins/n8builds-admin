@@ -36,12 +36,19 @@ export interface D1Database {
 /** n8builds-web's WaitlistAdmin entrypoint (its worker/index.js), over the service binding. */
 export type WaitlistWriter = { deleteSubscriber(id: string): Promise<boolean> }
 
-type Env = { WAITLIST_DB?: D1Database; ANALYTICS_DB?: D1Database; ADMIN_DB?: D1Database; WAITLIST_ADMIN?: WaitlistWriter }
+type Env = {
+  WAITLIST_DB?: D1Database
+  ANALYTICS_DB?: D1Database
+  ADMIN_DB?: D1Database
+  WAITLIST_ADMIN?: WaitlistWriter
+  MAILROOM?: import('./mailroom').MailroomAdmin
+  ANNOUNCE?: import('./announcements').AnnounceAdmin
+}
 
 const LOCAL = Symbol.for('n8builds-admin.localCloudflareEnv')
 type WithLocal = typeof globalThis & { [LOCAL]?: Promise<Env> }
 
-async function cloudflareEnv(): Promise<Env | null> {
+export async function cloudflareEnv(): Promise<Env | null> {
   try {
     return getCloudflareContext().env as Env
   } catch {
@@ -113,4 +120,26 @@ export async function adminDb(): Promise<D1Database | null> {
 
 export async function waitlistWriter(): Promise<WaitlistWriter | null> {
   return (await cloudflareEnv())?.WAITLIST_ADMIN ?? null
+}
+
+/** mailroom's MailroomAdmin entrypoint, for the Mailroom page; null where it isn't bound. */
+export async function mailroomAdmin(): Promise<import('./mailroom').MailroomAdmin | null> {
+  return (await cloudflareEnv())?.MAILROOM ?? null
+}
+
+/** n8builds-web's Announcements entrypoint, for the Announcements page; null where it isn't bound. */
+export async function announceAdmin(): Promise<import('./announcements').AnnounceAdmin | null> {
+  return (await cloudflareEnv())?.ANNOUNCE ?? null
+}
+
+/**
+ * A service binding whose Worker or entrypoint isn't there to answer: under
+ * `next dev` or `next start` the Worker isn't running locally ("Worker "x" not
+ * found"), and on Cloudflare the binding can be deployed before the Worker
+ * serves that entrypoint. Pages show "not connected" for these, not an error.
+ */
+const UNREACHABLE = /not found\. Make sure it is running locally|does not export|no such entrypoint|entrypoint .*(not found|does not exist)|does not implement|is not a function/i
+
+export function isUnreachableBinding(error: unknown): boolean {
+  return error instanceof Error && UNREACHABLE.test(error.message)
 }

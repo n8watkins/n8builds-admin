@@ -33,7 +33,19 @@
   ],
   // The one waitlist write the dashboard needs (deleting an address on
   // request) is n8builds-web's, over RPC: its WaitlistAdmin entrypoint.
-  "services": [{ "binding": "WAITLIST_ADMIN", "service": "n8builds-web", "entrypoint": "WaitlistAdmin" }],
+  // The Mailroom page reads every app's email and takes the owner's actions
+  // through mailroom's MailroomAdmin entrypoint (github.com/n8watkins/mailroom),
+  // which no app binds; mailroom has no public URL.
+  "services": [
+    { "binding": "WAITLIST_ADMIN", "service": "n8builds-web", "entrypoint": "WaitlistAdmin" },
+    { "binding": "MAILROOM", "service": "mailroom", "entrypoint": "MailroomAdmin" },
+    // The Announcements page emails a project's confirmed waitlist people
+    // through n8builds-web, which owns their tokens, the templates and the
+    // sending (through mailroom); this Worker never sees an address.
+    { "binding": "ANNOUNCE", "service": "n8builds-web", "entrypoint": "Announcements" },
+    // Each app's own admin totals for the Overview's Apps cards (docs/APP-STATS.md).
+    { "binding": "NETTRAILERS_ADMIN", "service": "net-trailers", "entrypoint": "AdminStats" }
+  ],
   // The daily snapshot (worker/handlers.ts), at the time the Vercel cron ran.
   "triggers": { "crons": ["15 6 * * *"] },
   "vars": {
@@ -47,8 +59,8 @@
   // GITHUB_OAUTH_CLIENT_ID, GITHUB_OAUTH_CLIENT_SECRET, ADMIN_SESSION_SECRET,
   // GITHUB_TOKEN, GITHUB_ORG_TOKEN, GA4_PROPERTY_ID, GOOGLE_SA_CLIENT_EMAIL,
   // GOOGLE_SA_PRIVATE_KEY, SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECTS,
-  // SENTRY_DSN, CRON_SECRET, CLOUDFLARE_DEPLOYS_TOKEN. Each page shows "not connected"
-  // until its secrets exist.
+  // SENTRY_DSN, CRON_SECRET, CLOUDFLARE_DEPLOYS_TOKEN, CF_ANALYTICS_TOKEN. Each page
+  // shows "not connected" until its secrets exist.
   // The dashboard's address; deploying creates its DNS record, so the old
   // Vercel record for admin must be gone first (DEPLOY.md).
   "routes": [{ "pattern": "admin.n8builds.dev", "custom_domain": true }],

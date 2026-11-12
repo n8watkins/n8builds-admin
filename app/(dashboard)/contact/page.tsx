@@ -14,10 +14,8 @@ export default async function Page() {
   await requireOwner()
   return (
     <>
-      <PageHeader
-        area={area}
-      />
-      <Panel id="contact" title="Messages" description="Delivered messages per day.">
+      <PageHeader area={area} />
+      <Panel id="contact" title="Messages">
         <Slot>
           <ContactPanel />
         </Slot>

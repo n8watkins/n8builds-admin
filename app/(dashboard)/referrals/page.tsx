@@ -14,10 +14,8 @@ export default async function Page() {
   await requireOwner()
   return (
     <>
-      <PageHeader
-        area={area}
-      />
-      <Panel id="referrals" title="Clicks to techforpros.com" description="Counted on n8builds.dev, by link placement.">
+      <PageHeader area={area} />
+      <Panel id="referrals" title="Clicks to techforpros.com">
         <Slot>
           <ReferralsPanel />
         </Slot>

@@ -76,9 +76,9 @@ Reads unresolved and new issues and error volume for the sites Sentry already wa
 Where: [Sentry auth tokens](https://sentry.io/settings/account/api/auth-tokens/).
 Sets: `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECTS`, `SENTRY_API_BASE` (optional), `SENTRY_DSN` (optional).
 
-## 5. Counters, trends and the waitlist: the D1 databases
+## 5. Counters, trends, the waitlist and the newsletter: the D1 databases
 
-Reads the referral, contact and dino game counts and the waitlist from the databases n8builds-web writes, and keeps the daily stars and minutes snapshot in the dashboard's own database.
+Reads the referral, contact and dino game counts, the waitlist and the newsletter from the databases n8builds-web writes, and keeps the daily stars and minutes snapshot in the dashboard's own database.
 
 1. The three databases already exist and are bound in `wrangler.jsonc`: `n8builds-waitlist` and `n8builds-analytics` (owned by n8builds-web, read only here) and `n8builds-admin` (this dashboard's own).
 2. The deploy from `main` applies new files in `migrations/admin/` (`npm run db:migrate`) before the code goes live; run it by hand only for a local or manual deploy.
@@ -100,21 +100,34 @@ Shows each project's latest Cloudflare Workers deploy on the Releases page, the 
 Where: [Cloudflare API tokens](https://dash.cloudflare.com/profile/api-tokens).
 Sets: `CLOUDFLARE_DEPLOYS_TOKEN`.
 
-## 7. Hosting: the Cloudflare Worker and admin.n8builds.dev
+## 7. Cloudflare usage: a read-only Analytics token
+
+Shows Workers requests and CPU time this month and Workers AI neurons today against what the plan includes, and raises a chip on the Overview before anything would be billed.
+
+1. In Cloudflare, Manage account, Account API tokens (or My Profile, API Tokens), Create Token, Create Custom Token.
+2. Name `n8builds-admin analytics read`; permissions: Account, Account Analytics, Read, and nothing else; account resources: the owner's account only; an expiry date is fine (add a reminder).
+3. Account Analytics Read covers both datasets the page reads, `workersInvocationsAdaptive` (Workers) and `aiInferenceAdaptiveGroups` (Workers AI); if the Workers AI part says it needs a permission, add Account, Workers AI, Read to the same token.
+4. Store it with `pass-env set n8builds-admin/CF_ANALYTICS_TOKEN`, then set it on the Worker with `pass-env pipe n8builds-admin/CF_ANALYTICS_TOKEN -- npx wrangler secret put CF_ANALYTICS_TOKEN`.
+5. The page reads it at most every 10 minutes; the included amounts it compares against are in `lib/cloudflare-usage.ts`.
+
+Where: [Account API tokens](https://dash.cloudflare.com/?to=/:account/api-tokens), [Workers usage in Cloudflare](https://dash.cloudflare.com/b2c564cf83cb9184dd6d7cc4ff8b38bf/workers-and-pages).
+Sets: `CF_ANALYTICS_TOKEN`.
+
+## 8. Hosting: the Cloudflare Worker and admin.n8builds.dev
 
 Puts the dashboard online at admin.n8builds.dev, behind GitHub sign-in.
 
 1. The dashboard runs as the `n8builds-admin` Cloudflare Worker (DEPLOY.md), at `https://n8builds-admin.nathancwatkins23.workers.dev` until the domain moves.
 2. Before the first deploy, set every secret on this page with `npx wrangler secret put <NAME>`.
 3. Never set `ADMIN_DEV_BYPASS` or `ADMIN_TEST_AUTH` on the Worker; production builds compile both out, the build fails if either survives, and `APP_ENV=production` switches them off again at runtime.
-4. Add `CLOUDFLARE_API_TOKEN` (the "Edit Cloudflare Workers" template) as a GitHub Actions secret on the repo, so every push to `main` deploys.
+4. Add `CLOUDFLARE_API_TOKEN` (a custom token with Workers Scripts, D1 and Workers R2 Storage Edit on the owner's account only, DEPLOY.md) as a secret of the repo's `production` environment, so every push to `main` deploys.
 5. To move the domain, delete the `admin` CNAME to Vercel in Cloudflare DNS, then add `admin.n8builds.dev` as a custom domain of the Worker.
 6. Open `https://admin.n8builds.dev`, sign in with GitHub, and check that this page shows everything connected.
 7. Optional check: sign in with any other GitHub account and see "This dashboard is private to its owner".
 
 Where: [Workers and Pages](https://dash.cloudflare.com/b2c564cf83cb9184dd6d7cc4ff8b38bf/workers-and-pages), [n8builds.dev DNS](https://dash.cloudflare.com/b2c564cf83cb9184dd6d7cc4ff8b38bf/n8builds.dev/dns/records).
 
-## 8. AI crawlers: Cloudflare AI Crawl Control
+## 9. AI crawlers: Cloudflare AI Crawl Control
 
 Shows AI crawler traffic to n8builds.dev in Cloudflare without blocking it or adding a counter of our own.
 
@@ -146,4 +159,5 @@ Where: [AI Crawl Control](https://dash.cloudflare.com/b2c564cf83cb9184dd6d7cc4ff
 | `ADMIN_DB` | 5 | D1 binding (wrangler.jsonc) |
 | `CRON_SECRET` | 5 | Worker secret |
 | `CLOUDFLARE_DEPLOYS_TOKEN` | 6 | Worker secret |
+| `CF_ANALYTICS_TOKEN` | 7 | Worker secret (locally: `pass-env run -- npm run dev`, entry `n8builds-admin/CF_ANALYTICS_TOKEN`) |
 | `ADMIN_DEV_BYPASS` | - | `.env.local` only, value `1`, for the local preview before sign-in is set up |

@@ -15,7 +15,7 @@ export default async function Page() {
   return (
     <>
       <PageHeader area={area} />
-      <Panel id="game" title="The catch game" description="Rounds, players and scores from n8builds.dev and the portfolio.">
+      <Panel id="game" title="The catch game">
         <Slot>
           <GamePanel />
         </Slot>
