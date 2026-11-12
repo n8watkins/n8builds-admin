@@ -39,6 +39,10 @@
   "services": [
     { "binding": "WAITLIST_ADMIN", "service": "n8builds-web", "entrypoint": "WaitlistAdmin" },
     { "binding": "MAILROOM", "service": "mailroom", "entrypoint": "MailroomAdmin" },
+    // The Announcements page emails a project's confirmed waitlist people
+    // through n8builds-web, which owns their tokens, the templates and the
+    // sending (through mailroom); this Worker never sees an address.
+    { "binding": "ANNOUNCE", "service": "n8builds-web", "entrypoint": "Announcements" },
     // Each app's own admin totals for the Overview's Apps cards (docs/APP-STATS.md).
     { "binding": "NETTRAILERS_ADMIN", "service": "net-trailers", "entrypoint": "AdminStats" }
   ],

@@ -215,10 +215,13 @@ export function Stat({ label, value, hint, tone }: { label: string; value: React
   )
 }
 
-/** A horizontal meter, e.g. minutes used of the free 2,000. */
-export function Meter({ value, max, label, size = 'md' }: { value: number; max: number; label: string; size?: 'sm' | 'md' }) {
+/**
+ * A horizontal meter, e.g. minutes used of the free 2,000: amber from 70%,
+ * red at the limit. As `progress` (a send's sent of total) full is good, not a warning.
+ */
+export function Meter({ value, max, label, size = 'md', progress = false }: { value: number; max: number; label: string; size?: 'sm' | 'md'; progress?: boolean }) {
   const share = Math.min(1, max > 0 ? value / max : 0)
-  const tone = share >= 1 ? 'bg-rose-400' : share >= 0.7 ? 'bg-amber-300' : 'bg-cyan-400'
+  const tone = progress ? (share >= 1 ? 'bg-emerald-400' : 'bg-cyan-400') : share >= 1 ? 'bg-rose-400' : share >= 0.7 ? 'bg-amber-300' : 'bg-cyan-400'
   return (
     <div role="meter" aria-label={label} aria-valuenow={Math.round(value)} aria-valuemin={0} aria-valuemax={max} className={cx('w-full overflow-hidden rounded-full bg-white/[0.07]', size === 'sm' ? 'h-1.5' : 'h-3')}>
       <div className={cx('h-full rounded-full', tone)} style={{ width: `${Math.max(share * 100, value > 0 ? 1.5 : 0)}%` }} />

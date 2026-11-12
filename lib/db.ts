@@ -42,6 +42,7 @@ type Env = {
   ADMIN_DB?: D1Database
   WAITLIST_ADMIN?: WaitlistWriter
   MAILROOM?: import('./mailroom').MailroomAdmin
+  ANNOUNCE?: import('./announcements').AnnounceAdmin
 }
 
 const LOCAL = Symbol.for('n8builds-admin.localCloudflareEnv')
@@ -124,4 +125,21 @@ export async function waitlistWriter(): Promise<WaitlistWriter | null> {
 /** mailroom's MailroomAdmin entrypoint, for the Mailroom page; null where it isn't bound. */
 export async function mailroomAdmin(): Promise<import('./mailroom').MailroomAdmin | null> {
   return (await cloudflareEnv())?.MAILROOM ?? null
+}
+
+/** n8builds-web's Announcements entrypoint, for the Announcements page; null where it isn't bound. */
+export async function announceAdmin(): Promise<import('./announcements').AnnounceAdmin | null> {
+  return (await cloudflareEnv())?.ANNOUNCE ?? null
+}
+
+/**
+ * A service binding whose Worker or entrypoint isn't there to answer: under
+ * `next dev` or `next start` the Worker isn't running locally ("Worker "x" not
+ * found"), and on Cloudflare the binding can be deployed before the Worker
+ * serves that entrypoint. Pages show "not connected" for these, not an error.
+ */
+const UNREACHABLE = /not found\. Make sure it is running locally|does not export|no such entrypoint|entrypoint .*(not found|does not exist)|does not implement|is not a function/i
+
+export function isUnreachableBinding(error: unknown): boolean {
+  return error instanceof Error && UNREACHABLE.test(error.message)
 }

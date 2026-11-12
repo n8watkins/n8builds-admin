@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { ConfirmAction } from '@/components/ConfirmAction'
 import { Slot } from '@/components/Slot'
 import { Tabs, currentTab } from '@/components/Tabs'
 import { Meter, NotConnected, PageHeader, Panel, PanelError, StatusPill, cx, type Tone } from '@/components/ui'
@@ -20,7 +21,6 @@ import {
   type GlobalMonth,
 } from '@/lib/mailroom'
 import { removeSuppression, setDailyCap, setPaused } from './actions'
-import { ConfirmAction } from './ConfirmAction'
 
 const area = AREAS.mailroom
 
@@ -46,6 +46,8 @@ const shortTime = (at: number) => new Date(at).toLocaleString('en-US', { month: 
 /** "Oct 11" from "2026-10-11". */
 const shortDay = (day: string) => new Date(`${day}T00:00:00Z`).toLocaleString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
 const countTone = (tone: 'good' | 'warn' | 'bad') => (tone === 'bad' ? 'text-rose-300' : tone === 'warn' ? 'text-amber-200' : 'text-slate-100')
+
+const AUDITED = 'This is recorded in mailroom\'s audit log with your GitHub login.'
 
 const TILE = 'flex min-w-0 flex-col gap-2 rounded-xl bg-white/[0.03] p-4 ring-1 ring-inset ring-white/[0.06]'
 
@@ -247,6 +249,7 @@ function AppRow({ app, globalDayCap, monthCap }: { app: AppUsage; globalDayCap: 
                 : `mailroom will refuse every email ${name} sends, sign-in links included, until you resume it. ${name} sees a retryable "paused" answer.`
             }
             confirmLabel={app.paused ? 'Resume' : 'Pause email'}
+            note={AUDITED}
             danger={!app.paused}
             fields={{ app: app.app, paused: String(!app.paused) }}
           />
@@ -257,6 +260,7 @@ function AppRow({ app, globalDayCap, monthCap }: { app: AppUsage; globalDayCap: 
             title={`Change ${name}'s daily cap`}
             description={`Today it is ${app.caps.day} a day (default ${app.defaultDayCap}). The new cap applies at once, from today's count of ${app.today}.`}
             confirmLabel="Save cap"
+            note={AUDITED}
             fields={{ app: app.app }}
             number={{ name: 'cap', label: 'Emails a day', value: app.caps.day, min: 0, max: globalDayCap, resetLabel: app.caps.day !== app.defaultDayCap ? `Put back the default (${app.defaultDayCap})` : undefined }}
           />
@@ -422,6 +426,7 @@ async function Suppressions() {
             }
             confirmLabel="Remove"
             danger
+            note={AUDITED}
             fields={{ id: String(s.id) }}
           />
         </li>

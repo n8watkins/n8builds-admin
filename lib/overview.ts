@@ -1,5 +1,7 @@
 import 'server-only'
 import { getAllAppStats, type AppStatsResult } from './app-stats'
+import { tileOf } from './announce-view'
+import { getHistory, getProjects } from './announcements'
 import { unstable_cache } from 'next/cache'
 import type { AreaId } from './areas'
 import { REVALIDATE_SECONDS } from './cache'
@@ -186,6 +188,16 @@ async function newsletter(): Promise<Summary> {
   return { area: 'newsletter', key: 'newsletter', ...tileSummary(data, now.getTime()) }
 }
 
+async function announcements(): Promise<Summary> {
+  const [list, projects] = await Promise.all([getHistory(10), getProjects()])
+  if (!list || !projects) return notConnected('announcements', 'Needs the ANNOUNCE binding to n8builds-web')
+  if (!list.ok || !projects.ok) {
+    const message = !list.ok ? list.message : !projects.ok ? projects.message : ''
+    return { area: 'announcements', key: 'announcements', headline: 'Unavailable', detail: message, status: 'Unavailable', tone: 'warn' }
+  }
+  return { area: 'announcements', key: 'announcements', ...tileOf(list.data, projects.data, Date.now()) }
+}
+
 async function cloudflare(): Promise<Summary> {
   if (!isCloudflareUsageConnected()) return notConnected('cloudflare', 'Needs a Cloudflare analytics token', 'cloudflare-analytics')
   const [workers, ai] = await Promise.all([getWorkersUsage(), getAiUsage()])
@@ -239,6 +251,8 @@ const SOURCES: [AreaId, string, () => Promise<Summary>][] = [
   // Local reads, never cached: the waitlist and the newsletter hold people's addresses, and Setup reads this server's own configuration.
   ['waitlist', 'waitlist', waitlist],
   ['newsletter', 'newsletter', newsletter],
+  // Live, so a send in progress shows where it is.
+  ['announcements', 'announcements', announcements],
   ['setup', 'setup', setup],
 ]
 

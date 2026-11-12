@@ -10,6 +10,7 @@ import {
   LuListChecks,
   LuListPlus,
   LuMail,
+  LuMegaphone,
   LuMousePointerClick,
   LuNewspaper,
   LuRocket,
@@ -57,6 +58,7 @@ export type AreaId =
   | 'mailroom'
   | 'waitlist'
   | 'newsletter'
+  | 'announcements'
   | 'apps'
   | 'cloudflare'
   | 'setup'
@@ -270,6 +272,21 @@ export const AREAS: Record<AreaId, Area> = {
       'Stored in n8builds-waitlist beside the waitlist, which n8builds-web writes and this dashboard only reads.',
     ],
   },
+  announcements: {
+    id: 'announcements',
+    href: '/announcements',
+    label: 'Announcements',
+    icon: LuMegaphone,
+    accent: accent.rose,
+    summary: 'Email a project\'s confirmed waitlist people when there is news.',
+    about: [
+      'An announcement goes to everyone who confirmed their spot on one project\'s waitlist, from a template (now open, a progress update, launched) with your own words in it.',
+      'n8builds-web sends it through mailroom as the n8builds-web app, in batches within that app\'s daily and monthly caps; at a cap it pauses and resumes on its own.',
+      'A project can be announced at most once in 30 days, so nobody gets more than one a month about it.',
+      'Every email has a leave link that takes the address off the waitlist. This dashboard never sees an address: n8builds-web holds them.',
+      'Once it starts it cannot be unsent; Cancel only stops the emails not sent yet.',
+    ],
+  },
   apps: {
     id: 'apps',
     href: '/apps',
@@ -320,8 +337,8 @@ export const NAV_GROUPS: { title?: string; areas: AreaId[] }[] = [
   // Apps sits beside Sites, and keeps the Overview's five-wide rows full (Sites 4 + Apps 1).
   { title: 'Apps', areas: ['apps'] },
   { title: 'Counters', areas: ['referrals', 'contact', 'game'] },
-  { title: 'People', areas: ['waitlist', 'newsletter'] },
-  // Its own row on the Overview, beside Setup (Counters 3 + People 2 fill the row above).
+  { title: 'People', areas: ['waitlist', 'newsletter', 'announcements'] },
+  // On the Overview's five-wide rows: Counters 3 on one, then People 3 + Usage 1 + Setup 1 fill the next.
   { title: 'Usage', areas: ['cloudflare'] },
   { areas: ['setup'] },
 ]
