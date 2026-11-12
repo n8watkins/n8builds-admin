@@ -16,6 +16,7 @@ export const PAGES = [
   { path: '/game', heading: 'Dino game' },
   { path: '/waitlist', heading: 'Waitlist' },
   { path: '/newsletter', heading: 'Newsletter' },
+  { path: '/announcements', heading: 'Announcements' },
   { path: '/cloudflare', heading: 'Cloudflare usage' },
   { path: '/setup', heading: 'Setup' },
 ] as const

@@ -260,6 +260,29 @@ test.describe('cloudflare usage', () => {
   })
 })
 
+test.describe('announcements', () => {
+  // This server runs no n8builds-web, so ANNOUNCE has nothing behind it; tests/e2e/announcements.spec.ts checks the connected page.
+  test('without n8builds-web it says it is not connected, on both tabs, and the Overview tile goes to Setup', async ({ page }) => {
+    for (const path of ['/announcements', '/announcements?tab=history']) {
+      await page.goto(path)
+      const panel = page.locator('main section').last()
+      await expect(panel.getByText('Not connected yet'), path).toBeVisible()
+      await expect(panel.getByText("ANNOUNCE (service binding to n8builds-web's Announcements)", { exact: true }), path).toBeVisible()
+      // Not an error panel (Next's route announcer is an alert too, so match the panel's text).
+      await expect(page.getByRole('alert').filter({ hasText: /Couldn't load this/ }), path).toHaveCount(0)
+    }
+    await checkTabs(page, '/announcements', 'Announcements sections', [
+      ['Compose', null, 'New announcement'],
+      ['History', 'history', 'Announcements, newest first'],
+    ])
+
+    await page.goto('/')
+    const tile = page.getByTestId('tile-announcements')
+    await expect(tile).toContainText('Connect')
+    await expect(tile).toContainText('Needs the ANNOUNCE binding')
+  })
+})
+
 test.describe('phones', () => {
   test.use({ viewport: { width: 375, height: 812 } })
 

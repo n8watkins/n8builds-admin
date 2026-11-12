@@ -1,5 +1,5 @@
 import 'server-only'
-import { mailroomAdmin } from './db'
+import { isUnreachableBinding, mailroomAdmin } from './db'
 import { formatNumber } from './format'
 import type { Fetched } from './github'
 
@@ -132,11 +132,12 @@ async function read<T>(load: (admin: MailroomAdmin) => Promise<T>): Promise<Fetc
   try {
     return { ok: true, data: await load(admin) }
   } catch (error) {
+    if (isUnreachableBinding(error)) return null
     return { ok: false, status: 0, message: error instanceof Error ? error.message : 'mailroom did not answer' }
   }
 }
 
-/** Null where the MAILROOM binding isn't there (a local server without mailroom running). */
+/** Null where the MAILROOM binding isn't there, or mailroom isn't running (a local server). */
 export const getEmailUsage = () => read((admin) => admin.usage())
 export const getRecentSends = (limit = 50) => read((admin) => admin.recentSends({ limit }))
 export const getProblems = (limit = 50) => read((admin) => admin.problems({ limit }))

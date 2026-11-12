@@ -4,7 +4,9 @@
 // - the test stub's ADMIN_TEST_AUTH, in every build except a local E2E build
 //   (ADMIN_E2E_BUILD=1, written to .next-e2e);
 // - the Cloudflare usage page's made-up numbers, CF_ANALYTICS_FIXTURE
-//   (lib/cloudflare-usage.ts), on the same terms as ADMIN_TEST_AUTH.
+//   (lib/cloudflare-usage.ts), and the Announcements page's made-up
+//   entrypoint, ANNOUNCE_FIXTURE (lib/announce-fixture.ts), on the same
+//   terms as ADMIN_TEST_AUTH.
 // With --worker it checks the Cloudflare Worker bundle instead (.open-next,
 // what `opennextjs-cloudflare deploy` uploads), for both reads: no E2E build
 // is ever allowed there (npm run build:worker and npm run deploy run it).
@@ -20,7 +22,7 @@ const dist = worker ? '.open-next' : e2e ? '.next-e2e' : '.next'
 const reads = (name) => new RegExp(`env\\s*(?:\\.\\s*${name}|\\[\\s*["'\`]${name})`)
 const forbidden = [
   ['ADMIN_DEV_BYPASS', reads('ADMIN_DEV_BYPASS')],
-  ...(e2e ? [] : [['ADMIN_TEST_AUTH', reads('ADMIN_TEST_AUTH')], ['CF_ANALYTICS_FIXTURE', reads('CF_ANALYTICS_FIXTURE')]]),
+  ...(e2e ? [] : [['ADMIN_TEST_AUTH', reads('ADMIN_TEST_AUTH')], ['CF_ANALYTICS_FIXTURE', reads('CF_ANALYTICS_FIXTURE')], ['ANNOUNCE_FIXTURE', reads('ANNOUNCE_FIXTURE')]]),
 ]
 const offenders = []
 

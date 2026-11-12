@@ -1,6 +1,7 @@
 'use server'
 import { revalidatePath } from 'next/cache'
 import { requireOwner } from '@/lib/auth/owner'
+import type { ActionState } from '@/lib/action-state'
 import { mailroomAdmin } from '@/lib/db'
 
 /**
@@ -8,8 +9,6 @@ import { mailroomAdmin } from '@/lib/db'
  * after the confirmation dialog, and mailroom writes it to its audit log with
  * the owner's GitHub login as the actor.
  */
-export type ActionState = { ok: boolean; message: string } | null
-
 const APP_ID = /^[a-z0-9-]{1,40}$/
 
 async function run(change: (admin: NonNullable<Awaited<ReturnType<typeof mailroomAdmin>>>, actor: string) => Promise<{ ok: true; detail: string } | { ok: false; error: string }>): Promise<ActionState> {
