@@ -281,7 +281,8 @@ export const AREAS: Record<AreaId, Area> = {
     summary: 'Email a project\'s confirmed waitlist people when there is news.',
     about: [
       'An announcement goes to everyone who confirmed their spot on one project\'s waitlist, from a template (now open, a progress update, launched) with your own words in it.',
-      'n8builds-web sends it through mailroom as the n8builds-web app, in batches within that app\'s daily and monthly caps; at a cap it pauses and resumes on its own.',
+      'n8builds-web sends it through mailroom as the n8builds-web app: 20 at once, then 20 every 15 minutes, at most 40 announcement emails a UTC day and 140 a month, which leaves the rest of its slice (60 a day, 200 a month) for the contact form and waitlist mail. At a limit it pauses and carries on by itself.',
+      'An address mailroom has suppressed (a bounce, a complaint) counts as failed and is passed over.',
       'A project can be announced at most once in 30 days, so nobody gets more than one a month about it.',
       'Every email has a leave link that takes the address off the waitlist. This dashboard never sees an address: n8builds-web holds them.',
       'Once it starts it cannot be unsent; Cancel only stops the emails not sent yet.',

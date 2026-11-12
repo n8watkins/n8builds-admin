@@ -5,7 +5,8 @@
  * only with this request's nonce: no 'unsafe-inline', and 'strict-dynamic'
  * lets Next.js's own scripts load the chunks they need. The browser loads
  * nothing from any other origin (GitHub, Google, Sentry and Cloudflare are all
- * called from the server), so everything else is 'self' or nothing.
+ * called from the server) except the announcement preview's images from
+ * n8builds.dev, so everything else is 'self' or nothing.
  * Styles keep 'unsafe-inline' for React style attributes.
  */
 export function contentSecurityPolicy(nonce: string, { dev = false }: { dev?: boolean } = {}): string {
@@ -14,7 +15,8 @@ export function contentSecurityPolicy(nonce: string, { dev = false }: { dev?: bo
     // React needs eval in `next dev` only, for its error overlays.
     'script-src': ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", ...(dev ? ["'unsafe-eval'"] : [])],
     'style-src': ["'self'", "'unsafe-inline'"],
-    'img-src': ["'self'", 'data:', 'blob:'],
+    // n8builds.dev: the Announcements preview (a sandboxed srcdoc frame, which takes this page's policy) shows the email's logo and project icons from there.
+    'img-src': ["'self'", 'data:', 'blob:', 'https://n8builds.dev'],
     'font-src': ["'self'"],
     // Dev HMR uses a websocket.
     'connect-src': ["'self'", ...(dev ? ['ws:'] : [])],

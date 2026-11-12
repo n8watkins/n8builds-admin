@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import { ConfirmAction } from '@/components/ConfirmAction'
 import { Tabs, currentTab } from '@/components/Tabs'
 import { Meter, NotConnected, PageHeader, Panel, PanelError, StatusPill } from '@/components/ui'
-import { allowanceOf, anySending, formatPeople, isActive, progressOf, projectChoices, statePill } from '@/lib/announce-view'
-import { getHistory, getProjectsAndTemplates, getSenderUsage, type Announcement, type AnnounceProject } from '@/lib/announcements'
+import { allowanceOf, anySending, formatPeople, historyMeta, isActive, nothingToPick, progressOf, projectChoices, statePill, stopReason } from '@/lib/announce-view'
+import { getHistory, getProjectsAndTemplates, getSenderUsage, type Announcement, type AnnounceProject, type AnnounceTemplate } from '@/lib/announcements'
 import { AREAS } from '@/lib/areas'
 import { requireOwner } from '@/lib/auth/owner'
 import { cancelAnnouncement } from './actions'
@@ -26,7 +26,7 @@ function AnnounceNotConnected() {
   )
 }
 
-function History({ list, projects, now }: { list: Announcement[]; projects: AnnounceProject[]; now: number }) {
+function History({ list, projects, templates, now }: { list: Announcement[]; projects: AnnounceProject[]; templates: AnnounceTemplate[]; now: number }) {
   if (list.length === 0) return <p className="text-[15px] text-slate-400">No announcement yet. The first one shows here as soon as it starts.</p>
   const name = (slug: string) => projects.find((project) => project.slug === slug)?.name ?? slug
   return (
@@ -37,6 +37,8 @@ function History({ list, projects, now }: { list: Announcement[]; projects: Anno
           const pill = statePill(announcement, now)
           const progress = progressOf(announcement)
           const project = name(announcement.project)
+          const meta = historyMeta(announcement, templates, now)
+          const stop = stopReason(announcement.lastError)
           return (
             <li key={announcement.id} aria-label={`${project}: ${announcement.subject}`} className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
               <div className="flex min-w-0 flex-1 flex-col gap-2">
@@ -45,13 +47,24 @@ function History({ list, projects, now }: { list: Announcement[]; projects: Anno
                   <StatusPill tone={pill.tone}>{pill.label}</StatusPill>
                 </div>
                 <p className="text-[14px] [overflow-wrap:anywhere] text-slate-300">{announcement.subject}</p>
+                {meta && <p className="text-[13px] text-slate-400">{meta}</p>}
                 <div className="flex max-w-xl flex-col gap-1.5">
                   <Meter size="sm" progress value={progress.done} max={announcement.total} label={`${project}: ${progress.done} of ${announcement.total} handled`} />
                   <p className="text-[13px] text-slate-400 tabular-nums">
                     <span className="font-medium text-slate-200">{progress.label}</span>
-                    {progress.problems && <span className="text-amber-200">, {progress.problems}</span>}                  </p>
+                    {', '}
+                    <span className={announcement.failed > 0 ? 'text-amber-200' : undefined} title="Failed: addresses mailroom refused, such as a bounced or suppressed one">
+                      {progress.problems}
+                    </span>
+                  </p>
                 </div>
-                {announcement.lastError && <p className="font-mono text-[13px] [overflow-wrap:anywhere] text-rose-200/90">Last error: {announcement.lastError}</p>}
+                {stop && (
+                  <p className="text-[13px] [overflow-wrap:anywhere] text-rose-200/90">
+                    {announcement.state === 'paused_cap' ? 'Paused: ' : 'Last stop: '}
+                    {stop}
+                    {stop !== announcement.lastError && <span className="ml-1.5 font-mono text-[13px] text-slate-400">({announcement.lastError})</span>}
+                  </p>
+                )}
               </div>
               {isActive(announcement) && (
                 <ConfirmAction
@@ -63,7 +76,7 @@ function History({ list, projects, now }: { list: Announcement[]; projects: Anno
                   confirmLabel="Stop sending"
                   danger
                   note="n8builds-web records your GitHub login as who cancelled it."
-                  fields={{ id: String(announcement.id), numeric: String(typeof announcement.id === 'number') }}
+                  fields={{ id: announcement.id }}
                 />
               )}
             </li>
@@ -87,6 +100,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const [setup, history, usage] = await Promise.all([getProjectsAndTemplates(), getHistory(), tab.id === 'compose' ? getSenderUsage() : null])
   const now = new Date().getTime()
   const active = history?.ok ? history.data.filter(isActive).length : 0
+  const choices = setup?.ok ? projectChoices(setup.data.projects, now) : []
   return (
     <>
       <PageHeader area={area} />
@@ -98,13 +112,13 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
           ) : !setup.ok ? (
             <PanelError message={setup.message} />
           ) : tab.id === 'compose' ? (
-            <Composer choices={projectChoices(setup.data.projects, now)} templates={setup.data.templates} allowance={allowanceOf(usage)} />
+            <Composer choices={choices} templates={setup.data.templates} allowance={history?.ok ? allowanceOf(usage, history.data, now) : null} blocked={nothingToPick(choices)} />
           ) : !history ? (
             <AnnounceNotConnected />
           ) : !history.ok ? (
             <PanelError message={history.message} />
           ) : (
-            <History list={history.data} projects={setup.data.projects} now={now} />
+            <History list={history.data} projects={setup.data.projects} templates={setup.data.templates} now={now} />
           )}
         </Panel>
       </div>

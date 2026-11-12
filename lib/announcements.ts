@@ -14,7 +14,7 @@ import { getEmailUsage, type AppUsage } from './mailroom'
 
 export type TemplateId = 'open' | 'progress' | 'launched'
 
-/** A date as n8builds-web sends it: epoch ms or an ISO string. */
+/** A date as n8builds-web sends it (an ISO string; epoch ms is read too). */
 export type When = number | string
 
 export type AnnounceProject = {
@@ -25,44 +25,61 @@ export type AnnounceProject = {
   lastAnnouncedAt: When | null
 }
 
-export type TemplateField = { key: string; label: string; max: number }
+/**
+ * One field of a template. A required one can't be empty; an optional one
+ * left empty turns its line off, and a key left out of a request falls back
+ * to the project's default copy. `required` is missing from an older Worker:
+ * read as required.
+ */
+export type TemplateField = { key: string; label: string; max: number; required?: boolean }
 export type AnnounceTemplate = { id: TemplateId; name: string; fields: TemplateField[] }
 
 export type AnnounceInput = { project: string; template: TemplateId; fields: Record<string, string> }
-export type AnnouncePreview = { subject: string; html: string; text: string; recipients: number }
+/** `fields` is what it resolved to: the project's defaults with the request on top. */
+export type AnnouncePreview = { subject: string; html: string; text: string; recipients: number; fields?: Record<string, string> }
 
 /** mailroom's SendResult. */
-export type SendResult = { ok: boolean; code?: string; retryable?: boolean; messageId?: string }
+export type SendResult = { ok: boolean; code?: string; retryable?: boolean; messageId?: string; message?: string }
 
-export type StartResult = { id: string | number } | { error: 'too_soon'; nextAllowedAt: When }
+/** start() also throws on bad input (unknown project or template, a field over its max, an empty required field, a non-https link, a [[...]] placeholder left in). */
+export type StartResult = { id: string } | { error: 'too_soon'; nextAllowedAt: When } | { error: 'no_recipients' }
 
 export type AnnouncementState = 'sending' | 'paused_cap' | 'done' | 'cancelled'
 
 export type Announcement = {
-  id: string | number
+  id: string
   /** The project's slug. */
   project: string
   subject: string
   total: number
   sent: number
+  /** Includes addresses mailroom suppressed (a bounce, a complaint). */
   failed: number
   skipped: number
   state: AnnouncementState
   lastError: string | null
   /** When a paused send picks up again. */
   nextRunAt: When | null
+  /** Additions to the first contract, missing from an older Worker. */
+  template?: TemplateId
+  createdAt?: When
+  /** The GitHub login that started it. */
+  createdBy?: string
+  finishedAt?: When | null
 }
 
-/** n8builds-web's Announcements entrypoint. */
+/** n8builds-web's Announcements entrypoint (its lib/announce/service.ts). */
 export type AnnounceAdmin = {
   projects(): Promise<AnnounceProject[]>
   templates(): Promise<AnnounceTemplate[]>
   preview(input: AnnounceInput): Promise<AnnouncePreview>
   sendTest(input: AnnounceInput, actor: string): Promise<SendResult>
   start(input: AnnounceInput, actor: string): Promise<StartResult>
-  status(id: string | number): Promise<Announcement>
+  /** Null for an unknown id. */
+  status(id: string): Promise<Announcement | null>
   list(opts: { limit: number }): Promise<Announcement[]>
-  cancel(id: string | number, actor: string): Promise<unknown>
+  /** Its status after cancelling (a finished one is left as it was), or null for an unknown id. */
+  cancel(id: string, actor: string): Promise<Announcement | null>
 }
 
 /** The app n8builds-web sends as, in mailroom. */
