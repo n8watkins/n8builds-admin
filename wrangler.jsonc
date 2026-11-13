@@ -43,6 +43,9 @@
     // through n8builds-web, which owns their tokens, the templates and the
     // sending (through mailroom); this Worker never sees an address.
     { "binding": "ANNOUNCE", "service": "n8builds-web", "entrypoint": "Announcements" },
+    // The Newsletter page's "Turn newsletter on/off" and Kit's status, from
+    // n8builds-web (the newsletter runs on Kit; no address reaches this Worker).
+    { "binding": "NEWSLETTER", "service": "n8builds-web", "entrypoint": "NewsletterAdmin" },
     // Each app's own admin totals for the Overview's Apps cards (docs/APP-STATS.md).
     { "binding": "NETTRAILERS_ADMIN", "service": "net-trailers", "entrypoint": "AdminStats" }
   ],

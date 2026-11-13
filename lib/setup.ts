@@ -158,15 +158,14 @@ export const SETUP_ITEMS: SetupItem[] = [
   },
   {
     id: 'databases',
-    title: 'Counters, trends, the waitlist and the newsletter: the D1 databases',
-    why: 'Reads the referral, contact and dino game counts, the waitlist and the newsletter from the databases n8builds-web writes, and keeps the daily stars and minutes snapshot in the dashboard\'s own database.',
+    title: 'Counters, trends and the waitlist: the D1 databases',
+    why: 'Reads the referral, contact and dino game counts, and the waitlist from the databases n8builds-web writes, and keeps the daily stars and minutes snapshot in the dashboard\'s own database.',
     powers: [
       { label: 'Stars trend', href: '/repos' },
       { label: 'Referrals', href: '/referrals' },
       { label: 'Contact messages', href: '/contact' },
       { label: 'Dino game', href: '/game' },
       { label: 'Waitlist', href: '/waitlist' },
-      { label: 'Newsletter', href: '/newsletter' },
     ],
     check: 'bindings',
     vars: [

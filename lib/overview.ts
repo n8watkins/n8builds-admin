@@ -15,7 +15,7 @@ import { APPTURNITY_ORG, FREE_ACTIONS_MINUTES, TRACKED_REPOS, shortName } from '
 import { getSentrySummary, sentryConfig } from './sentry'
 import { allSetupStatuses } from './setup-status'
 import { isAnalyticsConnected, readDailyCounts, readDailyFieldTotals } from './store'
-import { readNewsletter, tileSummary } from './newsletter'
+import { readNewsletterStatus, tileSummary } from './newsletter'
 import { isWaitlistConnected, readWaitlist } from './waitlist'
 
 /**
@@ -181,11 +181,10 @@ async function waitlist(): Promise<Summary> {
 }
 
 async function newsletter(): Promise<Summary> {
-  if (!(await isWaitlistConnected())) return notConnected('newsletter', 'Needs the waitlist database', 'databases')
-  const now = new Date()
-  const data = await readNewsletter(now)
-  if (data === 'no-tables') return { area: 'newsletter', key: 'newsletter', headline: 'Not live yet', detail: 'Its tables aren\'t in n8builds-waitlist yet', status: 'Not live yet', tone: 'quiet' }
-  return { area: 'newsletter', key: 'newsletter', ...tileSummary(data, now.getTime()) }
+  const loaded = await readNewsletterStatus()
+  if (loaded.state === 'off') return notConnected('newsletter', 'Needs the NEWSLETTER binding to n8builds-web')
+  if (loaded.state === 'error') return { area: 'newsletter', key: 'newsletter', headline: '-', detail: loaded.message, status: 'Error', tone: 'warn' }
+  return { area: 'newsletter', key: 'newsletter', ...tileSummary(loaded.status) }
 }
 
 async function announcements(): Promise<Summary> {

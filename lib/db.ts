@@ -43,6 +43,7 @@ type Env = {
   WAITLIST_ADMIN?: WaitlistWriter
   MAILROOM?: import('./mailroom').MailroomAdmin
   ANNOUNCE?: import('./announcements').AnnounceAdmin
+  NEWSLETTER?: import('./newsletter').NewsletterAdmin
 }
 
 const LOCAL = Symbol.for('n8builds-admin.localCloudflareEnv')
