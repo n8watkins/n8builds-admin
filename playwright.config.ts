@@ -39,10 +39,10 @@ export default defineConfig({
     ? [{ name: 'gate', testMatch: /gate\.spec\.ts/, use: { ...devices['Desktop Chrome'], baseURL: remote } }]
     : [
         { name: 'gate', testMatch: /gate\.spec\.ts/, use: { ...devices['Desktop Chrome'], baseURL: `http://localhost:${GATE_PORT}` } },
-        { name: 'app', testIgnore: /(gate|fixtures|announcements|announcements-empty)\.spec\.ts/, use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, baseURL: `http://localhost:${APP_PORT}` } },
+        { name: 'app', testIgnore: /(gate|fixtures|announcements|announcements-empty|newsletter|newsletter-empty)\.spec\.ts/, use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, baseURL: `http://localhost:${APP_PORT}` } },
         // After app: both servers read the same local D1 files, and two workerd processes reading them at once can hit SQLITE_BUSY.
-        { name: 'fixtures', dependencies: ['app'], testMatch: /(fixtures|announcements)\.spec\.ts/, use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, baseURL: `http://localhost:${FIXTURE_PORT}` } },
-        { name: 'announce-empty', dependencies: ['app'], testMatch: /announcements-empty\.spec\.ts/, use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, baseURL: `http://localhost:${EMPTY_PORT}` } },
+        { name: 'fixtures', dependencies: ['app'], testMatch: /(fixtures|announcements|newsletter)\.spec\.ts/, use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, baseURL: `http://localhost:${FIXTURE_PORT}` } },
+        { name: 'announce-empty', dependencies: ['app'], testMatch: /(announcements|newsletter)-empty\.spec\.ts/, use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, baseURL: `http://localhost:${EMPTY_PORT}` } },
       ],
   webServer: remote ? [] : [
     {

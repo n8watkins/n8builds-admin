@@ -263,13 +263,12 @@ export const AREAS: Record<AreaId, Area> = {
     label: 'Newsletter',
     icon: LuNewspaper,
     accent: accent.indigo,
-    summary: 'Who gets new N8\'s Notions posts by email, and each weekly digest.',
+    summary: 'Turn the n8builds newsletter on or off; Kit keeps the list and sends it.',
     about: [
-      'Readers sign up on n8builds.dev\'s blog and confirm by email (double opt-in); an unconfirmed address expires after 7 days.',
-      'A weekly digest goes out when a post was published since the last one, sent through mailroom in small batches; a week that would go past the newsletter\'s monthly email budget is skipped, with the reason.',
-      'A long list sends over several days (up to 30 emails a daily run); a digest with no delivery for 26 hours counts as stalled and needs attention.',
-      'Every digest has an unsubscribe link that deletes the address. Addresses are shown masked, and links\' tokens are never read.',
-      'Stored in n8builds-waitlist beside the waitlist, which n8builds-web writes and this dashboard only reads.',
+      'The newsletter runs on Kit: readers sign up on n8builds.dev, Kit sends the confirm email (double opt-in), every broadcast and every unsubscribe.',
+      'Off (the default) hides every newsletter form on n8builds.dev, and the waitlist keeps its own confirm emails. On sends newsletter and waitlist sign-ups to Kit, tagged by topic or project.',
+      'It only goes live once the Kit key (KIT_API_KEY) is set on n8builds-web.',
+      'The switch lives in n8builds-web, reached over the NEWSLETTER service binding; every change is logged with your GitHub login. No address reaches this dashboard.',
     ],
   },
   announcements: {

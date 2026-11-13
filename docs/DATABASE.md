@@ -31,11 +31,11 @@ Keep both current with the code.
 - The one write the dashboard needs, deleting an address on request, is n8builds-web's: the Waitlist page calls its `WaitlistAdmin.deleteSubscriber` over the `WAITLIST_ADMIN` service binding (RPC, never reachable from the internet).
 - Every page is behind the owner's GitHub sign-in.
 
-## The newsletter's tables
+## The newsletter
 
-The Newsletter page and its Overview tile read `newsletter_subscribers`, `newsletter_digests` and `newsletter_deliveries` (n8builds-web's `migrations/waitlist/0002_newsletter.sql`), in `lib/newsletter.ts`.
-Addresses are masked inside the query (`jo***@example.com`, mailroom's rule), so a full address never reaches the dashboard, and `confirm_hash` and `unsubscribe_token` are never selected.
-Until that migration reaches `n8builds-waitlist`, the page says "Not live yet" instead of failing.
+The newsletter runs on Kit, so no database here or in n8builds-waitlist holds its readers.
+The Newsletter page and its Overview tile ask n8builds-web over the `NEWSLETTER` service binding (its `NewsletterAdmin` entrypoint) for the on/off switch, its log and Kit's side (key set, form, confirmed count), in `lib/newsletter.ts`; "Turn newsletter on/off" is that entrypoint's `setSwitch`, with the owner's login.
+The self-sent newsletter's old tables (n8builds-web's `migrations/waitlist/0002_newsletter.sql`) are no longer read; their schema copy stays in `tests/fixtures/web-schema/` until n8builds-web drops them.
 
 ## n8builds-admin
 

@@ -76,9 +76,9 @@ Reads unresolved and new issues and error volume for the sites Sentry already wa
 Where: [Sentry auth tokens](https://sentry.io/settings/account/api/auth-tokens/).
 Sets: `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECTS`, `SENTRY_API_BASE` (optional), `SENTRY_DSN` (optional).
 
-## 5. Counters, trends, the waitlist and the newsletter: the D1 databases
+## 5. Counters, trends and the waitlist: the D1 databases
 
-Reads the referral, contact and dino game counts, the waitlist and the newsletter from the databases n8builds-web writes, and keeps the daily stars and minutes snapshot in the dashboard's own database.
+Reads the referral, contact and dino game counts, and the waitlist from the databases n8builds-web writes, and keeps the daily stars and minutes snapshot in the dashboard's own database.
 
 1. The three databases already exist and are bound in `wrangler.jsonc`: `n8builds-waitlist` and `n8builds-analytics` (owned by n8builds-web, read only here) and `n8builds-admin` (this dashboard's own).
 2. The deploy from `main` applies new files in `migrations/admin/` (`npm run db:migrate`) before the code goes live; run it by hand only for a local or manual deploy.

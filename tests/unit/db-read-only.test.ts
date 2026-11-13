@@ -40,7 +40,6 @@ vi.mock('@opennextjs/cloudflare', () => ({
 const { assertReadOnly, readOnly } = await import('@/lib/db')
 const { countByProject, readWaitlist } = await import('@/lib/waitlist')
 const { readGameStats } = await import('@/lib/game')
-const { readNewsletter } = await import('@/lib/newsletter')
 const { readDailyCounts, readDailyFieldTotals, readSnapshots, writeSnapshot } = await import('@/lib/store')
 
 const NOW = new Date('2026-11-04T12:00:00Z')
@@ -154,7 +153,6 @@ describe('every reader of the shared databases', () => {
   it('only reads, and leaves both databases exactly as they were', async () => {
     const before = [await snapshotOf(dbs.waitlist), await snapshotOf(dbs.analytics)]
     await readWaitlist(NOW)
-    await readNewsletter(NOW)
     await readGameStats(30, NOW)
     await readDailyFieldTotals('ref:techforpros', 30, NOW)
     await readDailyCounts('contact:sent', 30, NOW)
