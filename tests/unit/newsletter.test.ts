@@ -78,6 +78,14 @@ describe('setNewsletter (Turn newsletter on/off)', () => {
     ])
   })
 
+  it('refuses to turn it on without the Kit key, and still lets it be turned off', async () => {
+    const setSwitch = vi.fn(async (on: boolean, by: string) => ({ on, at: '2026-11-13T17:00:00.000Z', by }))
+    binding = { status: async () => status({ on: true, kit: { configured: false, formId: null, confirmed: null, error: null } }), setSwitch }
+    expect(await setNewsletter(null, form('true'))).toEqual({ ok: false, message: 'Set the Kit key on n8builds-web first.' })
+    expect(await setNewsletter(null, form('false'))).toEqual({ ok: true, message: 'The newsletter is off.' })
+    expect(setSwitch.mock.calls).toEqual([[false, 'n8watkins']])
+  })
+
   it('refuses anything but true or false, and says when n8builds-web is missing or refuses', async () => {
     expect(await setNewsletter(null, form('yes'))).toEqual({ ok: false, message: 'Unknown setting.' })
     expect(await setNewsletter(null, form('true'))).toEqual({ ok: false, message: 'n8builds-web is not connected to this server.' })

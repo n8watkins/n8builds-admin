@@ -17,6 +17,8 @@ export async function setNewsletter(_state: ActionState, formData: FormData): Pr
   const admin = await newsletterAdmin()
   if (!admin) return { ok: false, message: 'n8builds-web is not connected to this server.' }
   try {
+    // The page disables "Turn newsletter on" without the Kit key; refuse it here too.
+    if (on && !(await admin.status()).kit.configured) return { ok: false, message: 'Set the Kit key on n8builds-web first.' }
     await admin.setSwitch(on, owner.login)
     revalidatePath('/newsletter')
     revalidatePath('/')

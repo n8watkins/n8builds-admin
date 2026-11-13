@@ -40,6 +40,8 @@ function NoKitKey({ on }: { on: boolean }) {
 function Switch({ status }: { status: NewsletterStatus }) {
   const { label, tone } = switchLabel(status)
   const turningOn = !status.on
+  // Turning it on can't take effect without the key: the button waits for it (turning off always works).
+  const blocked = turningOn && !status.kit.configured
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -58,23 +60,25 @@ function Switch({ status }: { status: NewsletterStatus }) {
             )}
           </p>
         </div>
-        <ConfirmAction
-          action={setNewsletter}
-          label={turningOn ? 'Turn newsletter on' : 'Turn newsletter off'}
-          title={turningOn ? 'Turn the newsletter on?' : 'Turn the newsletter off?'}
-          description={
-            turningOn
-              ? status.kit.configured
+        <div className="flex flex-col items-start gap-1.5 sm:items-end">
+          <ConfirmAction
+            action={setNewsletter}
+            label={turningOn ? 'Turn newsletter on' : 'Turn newsletter off'}
+            title={turningOn ? 'Turn the newsletter on?' : 'Turn the newsletter off?'}
+            description={
+              turningOn
                 ? 'Within a minute, the sign-up forms show on n8builds.dev, and waitlist sign-ups go to Kit with a tag per project. Kit sends each confirm email.'
-                : 'The switch is stored, but nothing shows on n8builds.dev until the Kit key is set on n8builds-web.'
-              : 'Within a minute, every newsletter form disappears from n8builds.dev and the waitlist goes back to its own confirm emails. Kit keeps everyone already signed up.'
-          }
-          confirmLabel={turningOn ? 'Turn on' : 'Turn off'}
-          danger={!turningOn}
-          primary={turningOn}
-          note="n8builds-web records the change with your GitHub login."
-          fields={{ on: String(turningOn) }}
-        />
+                : 'Within a minute, every newsletter form disappears from n8builds.dev and the waitlist goes back to its own confirm emails. Kit keeps everyone already signed up.'
+            }
+            confirmLabel={turningOn ? 'Turn on' : 'Turn off'}
+            danger={!turningOn}
+            primary={turningOn}
+            disabled={blocked}
+            note="n8builds-web records the change with your GitHub login."
+            fields={{ on: String(turningOn) }}
+          />
+          {blocked && <p className="text-[13px] text-slate-400">Needs the Kit key on n8builds-web first.</p>}
+        </div>
       </div>
       {!status.kit.configured && <NoKitKey on={status.on} />}
       {status.log.length > 0 && (
