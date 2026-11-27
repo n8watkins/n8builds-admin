@@ -2,5 +2,5 @@
   "versionFiles": [],
   "workflows": "package",
   "repository": "n8watkins/n8builds-admin",
-  "visibility": "private"
+  "visibility": "public"
 }
